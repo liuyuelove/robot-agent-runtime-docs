@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>系统全景 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="一次交互的七个边界与运行时对象关系。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">系统全景</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>系统全景 <span class="page-badge tag tag-blue">01</span></h1>
+
+<p class="lead">先看一条线：从人走到机器面前，到机器把事办完并退回原位。这条线上有七个边界，每个边界都由一个明确的合同定义。</p>
+
+<h2 id="sequence">一次完整交互</h2>
+
+<div class="flow-diagram">
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-content-title">1 · 感知</div>
+        <div class="flow-content-detail">环形麦拾音 / 人体感应 / 人脸抓拍 → 各自 Adapter 发布事实事件</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-content-title">2 · 输入规范化</div>
+        <div class="flow-content-detail">BrainInput 校验、去重、补 session_id → 发布「输入已被接受」</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-content-title">3 · 会话装配</div>
+        <div class="flow-content-detail">历史消息 + 业务卡 + 已确认事实 + 机器人当前状态 → GraphWorkingState</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-content-title">4 · Agent 推理</div>
+        <div class="flow-content-detail">LLM 决定：直接回答 / 调某个 Tool / 结束本轮</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-content-title">5 · 能力执行</div>
+        <div class="flow-content-detail">Tool.execute(input) → Public Adapter → 设备 / 外部服务</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content">
+        <div class="flow-content-title">6 · 输出</div>
+        <div class="flow-content-detail">BrainOutput 发布 → 数字人 / TTS / 业务屏 / 前端投影</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div></div>
+      <div class="flow-content">
+        <div class="flow-content-title">7 · 事实回流</div>
+        <div class="flow-content-detail">设备终态（已到达 / 已取号 / 已打开页面）→ 回写会话历史，进入下一轮</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2 id="loop">闭环：Adapter → EventBus → RobotState → Adapter</h2>
+
+<p>上面那条七步线是<strong>直线</strong>。但真实系统是<strong>闭环</strong>：设备产生的每一个事实，都要经过状态机判定，再反过来驱动设备。少了这个环，"一次完整交互"看起来就像一条有去无回的流水线。</p>
+
+<figure class="diagram">
+  <svg viewBox="0 0 880 540" role="img" aria-label="Adapter、EventBus、RobotState、Reaction 之间的闭环关系">
+    <defs>
+      <marker id="loop-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#9aa4b2"/>
+      </marker>
+    </defs>
+
+    <!-- 连线 -->
+    <line x1="218" y1="242" x2="350" y2="104" stroke="#9aa4b2" stroke-width="1.6" marker-end="url(#loop-ar)"/>
+    <line x1="528" y1="100" x2="662" y2="242" stroke="#9aa4b2" stroke-width="1.6" marker-end="url(#loop-ar)"/>
+    <line x1="664" y1="300" x2="548" y2="444" stroke="#9aa4b2" stroke-width="1.6" marker-end="url(#loop-ar)"/>
+    <line x1="332" y1="444" x2="208" y2="300" stroke="#9aa4b2" stroke-width="1.6" marker-end="url(#loop-ar)"/>
+
+    <!-- EventBus -->
+    <rect x="330" y="34" width="220" height="64" rx="12" fill="#f5f8ff" stroke="#7aa2f7" stroke-width="1.6"/>
+    <text x="440" y="60" text-anchor="middle" font-size="14.5" font-weight="600" fill="#1a1a2e" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">EventBus</text>
+    <text x="440" y="80" text-anchor="middle" font-size="11.5" fill="#6b7280" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">事实总线 · 只投递，不决策</text>
+
+    <!-- Adapter -->
+    <rect x="23" y="238" width="210" height="64" rx="12" fill="#faf8ff" stroke="#a78bfa" stroke-width="1.6"/>
+    <text x="128" y="264" text-anchor="middle" font-size="14.5" font-weight="600" fill="#1a1a2e" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">Adapter</text>
+    <text x="128" y="284" text-anchor="middle" font-size="11.5" fill="#6b7280" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">设备 / 外部服务 · 只报事实</text>
+
+    <!-- RobotState -->
+    <rect x="642" y="238" width="220" height="64" rx="12" fill="#fffaf0" stroke="#f59e0b" stroke-width="1.6"/>
+    <text x="752" y="264" text-anchor="middle" font-size="14.5" font-weight="600" fill="#1a1a2e" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">RobotState</text>
+    <text x="752" y="284" text-anchor="middle" font-size="11.5" fill="#6b7280" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">转发矩阵 + 转移矩阵</text>
+
+    <!-- Reaction / Tool -->
+    <rect x="320" y="442" width="240" height="64" rx="12" fill="#f4fdf9" stroke="#10b981" stroke-width="1.6"/>
+    <text x="440" y="468" text-anchor="middle" font-size="14.5" font-weight="600" fill="#1a1a2e" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">Reaction / Tool</text>
+    <text x="440" y="488" text-anchor="middle" font-size="11.5" fill="#6b7280" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">两条下发路径</text>
+
+    <!-- 边标签 -->
+    <text x="262" y="146" text-anchor="middle" font-size="12" fill="#475569" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">① 发布事实</text>
+    <text x="620" y="146" text-anchor="middle" font-size="12" fill="#475569" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">② 投递 · 转发矩阵放行</text>
+    <text x="638" y="392" text-anchor="middle" font-size="12" fill="#475569" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">③ 收口 → 触发 reaction</text>
+    <text x="228" y="392" text-anchor="middle" font-size="12" fill="#475569" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">④ 下发指令</text>
+
+    <!-- 中心注记 -->
+    <text x="440" y="252" text-anchor="middle" font-size="12" fill="#9aa4b2" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">环上每一跳</text>
+    <text x="440" y="272" text-anchor="middle" font-size="12" fill="#9aa4b2" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans GB', sans-serif">都只知道自己这一段</text>
+  </svg>
+  <figcaption>一次设备动作的完整回路。走完四跳回到起点——这就是为什么它是闭环，不是流水线。</figcaption>
+</figure>
+
+<p>拿"模型决定带路"走一遍：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>#</th><th>谁 → 谁</th><th>发生了什么</th><th>谁有权拒绝</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>Agent → Tool → Adapter</td>
+      <td>模型决定带路，Tool 通过公共 facade 拿到导航 Adapter，下发指令</td>
+      <td>Adapter 的准入检查</td>
+    </tr>
+    <tr>
+      <td>①</td>
+      <td>Adapter → EventBus</td>
+      <td>底盘到达，Adapter 发布「导航已完成」这一事实</td>
+      <td>无——事实一旦发生不可撤销</td>
+    </tr>
+    <tr>
+      <td>②</td>
+      <td>EventBus → RobotState</td>
+      <td>事件投递；转发矩阵判断当前状态下这类事实该不该被听见</td>
+      <td><strong>转发矩阵</strong>：不放行就到此为止</td>
+    </tr>
+    <tr>
+      <td>③</td>
+      <td>RobotState → Reaction</td>
+      <td>转移矩阵允许收口，状态切换，reaction 入队</td>
+      <td><strong>转移矩阵</strong>：不允许就留在原状态</td>
+    </tr>
+    <tr>
+      <td>④</td>
+      <td>Reaction → Adapter</td>
+      <td>下发数字人状态切换，屏幕变化，又产生新的事实</td>
+      <td>Adapter 的准入检查</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>四跳之后回到起点。注意第 ④ 跳的产物是"新的事实"——它会再次进入 ①。所以这个环不是转一圈就停，而是<strong>每一圈都在改变系统的状态</strong>。</p>
+
+<h3 id="loop-rules">三条"谁能碰谁"</h3>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>组件</th><th>能做</th><th>不能做</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Adapter</td>
+      <td>发布事实、执行指令、提供快照</td>
+      <td>不知道 RobotState 存在；不做业务判断；不调用其他 Adapter</td>
+    </tr>
+    <tr>
+      <td>EventBus</td>
+      <td>把事实投递给订阅方</td>
+      <td>不做路由决策；不保证顺序与幂等；不发命令</td>
+    </tr>
+    <tr>
+      <td>RobotState</td>
+      <td>判定放行、切换状态、触发 reaction</td>
+      <td>不直接改设备；不持有 Adapter 实例；不替会话做决定</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>三条合起来说明一件事：<strong>环上每一段都不知道整条环</strong>。Adapter 只知道自己发了什么，总线只知道自己送给了谁，状态机只知道自己该不该放行。没有任何一个组件持有完整流程——这正是它能在没人值守的现场长期跑下去的原因。</p>
+
+<h3 id="loop-nolock">这个环为什么不会死锁</h3>
+
+<p>因为每一跳都是<strong>发事实 / 收事实</strong>，没有同步调用回环。Tool 调 Adapter 那一跳确实是同步的，但它的返回值只表示"指令已受理"，不表示"事情已经办完"；真正的结果要等设备自己发事实回来。所以环上不存在"A 等 B、B 等 A"的等待链。</p>
+
+<p>断在哪就停在哪：总线挂了，事实堆在发布方；状态机挂了，事实被订阅方忽略；Adapter 挂了，快照里能直接看到连接状态。没有任何一跳会把上游一起拖死。</p>
+
+<div class="info-box warning">
+  <span class="ib-icon">⚠️</span>
+  <div class="ib-content">
+    <p class="ib-title">代价也要说清楚</p>
+    <p>没有同步回环，就意味着<strong>没有"调用—返回"式的因果</strong>。想知道"这次导航到底成没成"，只能订阅事实，不能等返回值。所以每个 Adapter 都必须提供 Snapshot——否则外部没有任何手段确认状态。这不是可选项，是这个结构的必要配套。</p>
+  </div>
+</div>
+
+<p>这个环的三个关节分别展开在：<a href="03-adapters.html">03 Adapter 体系</a>（合同与生命周期）、<a href="05-events.html">05 事件驱动</a>（为什么只发事实）、<a href="07-robot-state.html">07 机器人状态机</a>（两张矩阵怎么判）。</p>
+
+<h2 id="two-buses">两条总线，方向相反</h2>
+
+<div class="table-scroll"><table>
+  <thead><tr><th></th><th>Brain Input</th><th>Brain Output</th></tr></thead>
+  <tbody>
+    <tr><td>职责</td><td>校验并规范化输入，发布输入事实</td><td>校验输出命令，维护局部输出生命周期，发布输出事实</td></tr>
+    <tr><td>不负责</td><td>不跑 Agent、不排队、不持久化</td><td>不生成内容、不保证前端送达</td></tr>
+    <tr><td>实例粒度</td><td colspan="2">进程级单例（不是每会话一个）；会话隔离靠 <code>session_id</code> 关联字段</td></tr>
+  </tbody>
+</table></div>
+
+<p>两条总线都是<strong>进程内 Engine Adapter</strong>。它们存在的理由不是"解耦好看"，而是让"输入已被本地接受"和"回答已经生成"这两件事<strong>有各自独立的、可观测的边界</strong>——否则一个 SSE 断连就能把"用户说了话"和"模型回答了"搅成一团。</p>
+
+<h2 id="console">运行时监控台</h2>
+
+<p>下面这个界面是开发期实际使用的运行时面板：左侧摄像头输入，中间实时会话与工具调用轨迹，右侧设备模拟控制台。整条业务链路都由 Mock 驱动，不需要真机在场。</p>
+
+<figure class="shot">
+  <img src="assets/ui-console.png" alt="运行时监控台：左侧摄像头输入，中间会话与工具调用轨迹，右侧设备模拟控制台">
+  <figcaption>示意图 · 按真实界面重绘，全部文案已替换为通用示例</figcaption>
+</figure>
+
+<p>它解决的是一个很实际的问题：<strong>具身系统很难调试</strong>。一句话说完，机器人开始动、屏幕开始变、语音开始播，你没法像调 Web 应用那样在浏览器里打个断点。所以把"当前处于哪个状态、上一句说了什么、调了哪个工具、设备回了什么"全部摊在一屏上，是唯一能用的办法。</p>
+
+<p>注意右侧那栏：设备全部可以手动模拟。这不是玩具——它是让 <a href="12-testing.html">默认测试不依赖真硬件</a> 的前提。</p>
+
+<h2 id="ownership">谁持有谁</h2>
+
+<pre><code>composition root（启动时构造一次）
+  ├── AppConfig            不可变类型化配置
+  ├── AdapterSet           本实例拥有的全部 Adapter 实例
+  ├── AdapterRuntime       绑定 facade → 按序启动 → 失败反向回滚
+  └── ConversationRuntime  只编排交互生命周期
+        ├── Agent / LangGraph  →  Tool.execute()  →  facade  →  Adapter
+        └── SessionRepository  →  历史 / 检查点</code></pre>
+
+<p>关键约束：<strong>除了 composition root，没有第二个地方可以创建、启动或停止 Adapter</strong>。业务代码拿到的永远是已经跑起来的实例。</p>
+
+<h2 id="deploy">部署形态：为什么是单机</h2>
+
+<p>系统跑在机器人本体的工控机上，不是云上。这带来三条硬约束，后面几乎所有设计都能追溯到这里：</p>
+
+<ul>
+  <li><strong>没有运维</strong>——进程挂了没人重启，所以启动要么完整成功，要么完整回滚，不许留半启动状态；</li>
+  <li><strong>没有外网</strong>——模型、检索、语音全部是内网服务，任一不可用都要降级到"还能说话"而不是"整机黑屏"；</li>
+  <li><strong>资源有限</strong>——上下文必须精确计数并按预算压缩，不能靠"模型窗口很大"糊过去。</li>
+</ul>
+
+<h2 id="no-dispatcher">一个刻意的缺席：没有 Dispatcher</h2>
+
+<p>大多数同类系统里会有一个 <code>ActionDispatcher</code> 或 <code>ToolRouter</code>，把"模型说了要干什么"翻译成具体调用。这个项目<strong>明确禁止</strong>这类组件，并且用一条测试把它钉死（见 <a href="12-testing.html#guards">架构守护测试</a>）。</p>
+
+<p>理由是它必然退化成一个知道所有模块的总控大函数：新加一个能力要改它，改一个能力要担心影响别人，最后谁都不敢动。替代方案是让 <strong>Tool 自己就是那个翻译层</strong>——它拿着类型化 Input，在执行时按需向 facade 取 Adapter，出错就返回类型化错误。分发这件事被消解进每个 Tool 内部，而不是集中到一处。</p>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

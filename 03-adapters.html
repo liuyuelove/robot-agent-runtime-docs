@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adapter 体系 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="三类判定、Real/Mock 合同、从 0 到 1 写一个 Adapter、生命周期与 Engine 准入门槛。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">Adapter 体系</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>Adapter 体系 <span class="page-badge tag tag-green">03</span></h1>
+
+<p class="lead">27 个外部边界，每个都要能被替换、被 Mock、被单独测试。这一章讲的是：怎么判断一个东西该不该是 Adapter，以及一旦是了，它必须满足什么。</p>
+
+<h2 id="classes">三类判定</h2>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>分类</th><th>判断标准</th><th>典型对象</th><th>必须 Real + Mock</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Hardware</strong></td><td>连接物理设备或厂商硬件 SDK</td><td>底盘、业务屏、自助设备、环形麦、门禁</td><td>✅</td></tr>
+    <tr><td><strong>Integration</strong></td><td>连接进程外软件服务或第三方平台</td><td>语音识别 / 合成、数字人、地图、检索、行情、充电桩</td><td>✅</td></tr>
+    <tr><td><strong>Engine</strong></td><td>只在当前进程内运行的技术状态机或聚合器</td><td>输入总线、输出总线、机器人状态、人体存在判定</td><td>不强制</td></tr>
+  </tbody>
+</table></div>
+
+<p>分类不是按目录分的，是按<strong>失败模式</strong>分的。Hardware 和 Integration 会连不上、会超时、会返回脏数据，所以必须有 Mock 才能写测试；Engine 的失败是逻辑错误，用假实现反而掩盖问题。</p>
+
+<h2 id="realmock">Real / Mock 的合同一致</h2>
+
+<p>硬性要求：同一个 Adapter 的 <code>real.py</code> 和 <code>mock.py</code> 必须<strong>导出同一组类型</strong>——相同的 Event、相同的 Snapshot、相同的错误分类。测试里用 Mock 跑通的链路，换 Real 不能因为"事件字段不一样"而崩。</p>
+
+<p>这条规则的价值在联调阶段最明显：Mock 不是"随便返回点东西的桩"，它是<strong>对真实设备行为的一份可执行假设</strong>。当 Mock 和 Real 行为不一致时，说明我们对设备的理解错了——这个错误在测试里暴露，比在现场暴露便宜得多。</p>
+
+<div class="info-box tip">
+  <span class="ib-icon">💡</span>
+  <div class="ib-content">
+    <p class="ib-title">纯进程内组件不必强行对称</p>
+    <p>Engine 不为了"目录好看"去造空的 Real/Mock。只有当它<strong>真的</strong>需要两种实现时才分。这条后来救回了不少无谓的样板代码。</p>
+  </div>
+</div>
+
+<h2 id="build">从 0 到 1 写一个 Adapter</h2>
+
+<p>前面几节讲的是规则，这一节讲怎么落地。样本是一个真实存在的 Integration Adapter（数字人显示），最终形态是 15 个 Python 文件（含 transport）、2 份文档、4 个测试文件。下面按<strong>动手顺序</strong>走，每一步说清楚：先写什么、为什么先写它、容易踩什么坑。</p>
+
+<h3 id="build-0">第 0 步：先判断该不该做成 Adapter</h3>
+
+<p>写代码之前先回答三个问题：</p>
+
+<ol>
+  <li><strong>有没有外部系统？</strong>网络、进程、设备、SDK——任何一个都算。</li>
+  <li><strong>有没有生命周期？</strong>要不要 <code>start()</code> / <code>stop()</code>、会不会断线重连、退出时要不要清理资源。</li>
+  <li><strong>有没有第二个调用方？</strong>只有一个地方用的话，包一层只是多一次跳转。</li>
+</ol>
+
+<p>三个都是"是"，做成 Adapter；只有一个"是"，写普通类。这一步判断错了，后面九步全是白做。</p>
+
+<h3 id="build-1">第 1 步：先定合同（<code>__init__.py</code>，19 行）</h3>
+
+<p>第一件事不是写实现，是决定<strong>对外暴露哪些符号</strong>。这个文件只有 19 行，却是整个模块唯一的门：</p>
+
+<pre><code>from .adapter import DigitalHumanAdapter
+from .config import DigitalHumanConfig
+from .events import DigitalHumanConnectedEvent, DigitalHumanFrameReceivedEvent
+from .models import DigitalHumanSnapshot
+from .factory import create_digital_human_adapter
+
+__all__ = ["DigitalHumanAdapter", "DigitalHumanConfig", ...]</code></pre>
+
+<p>四类符号：<strong>Adapter</strong>（能调什么）、<strong>Config</strong>（怎么配）、<strong>Event</strong>（发生了什么事）、<strong>Snapshot</strong>（现在什么状态），外加一个 factory。</p>
+
+<p class="pitfall"><strong>坑：</strong>不要导出 <code>RealXxxAdapter</code> / <code>MockXxxAdapter</code>、transport、内部异常类型。一旦导出，别人就会写 <code>isinstance</code> 判断，Mock 从此换不掉。</p>
+
+<h3 id="build-2">第 2 步：Snapshot——外部能查到什么（22 行）</h3>
+
+<p>Snapshot 是"这个模块现在怎么样"的唯一答案，也是排查问题的入口。放进去的字段要满足两条：<strong>稳定</strong>（不随实现变化）、<strong>可观测</strong>（外部真的会看）。</p>
+
+<p>典型内容：是否已启动、是否已连接、消息与事件计数、最后一次错误、最后一条事实的关键值。</p>
+
+<p class="pitfall"><strong>坑：</strong>不要放 <code>use_mock</code>、实现类名、原始 payload。Snapshot 里一旦有这些，等于把实现细节升格成合同。</p>
+
+<h3 id="build-3">第 3 步：Event——它发生了什么（30 行）</h3>
+
+<p>只发<strong>已经发生的事实</strong>，不发命令、不带请求意图。命名固定为 <code>&lt;模块&gt;&lt;事实&gt;Event</code>，字段递归不可变。</p>
+
+<p>一个 Adapter 通常只发三五个事件：连接建立、连接断开、业务事实、失败。业务事实要<strong>归一化</strong>——把供应商的 payload 翻译成自己的语义，而不是把 payload 塞进事件里。</p>
+
+<p class="pitfall"><strong>坑：</strong>事件里带原始 payload，等于让下游依赖供应商格式。以后换供应商，下游全要改。</p>
+
+<h3 id="build-4">第 4 步：Config——需要哪些参数（75 行）</h3>
+
+<p>一个类型化 dataclass 加一个 parser。parser 从合并后的配置字典里取值、校验、给默认值；构造一次，之后不可变。</p>
+
+<p>这个 Adapter 的配置项大致是：<code>device_id</code>、<code>use_mock</code>、<code>endpoint</code>、连接超时、接收超时、重连间隔、心跳参数。</p>
+
+<p class="pitfall"><strong>坑：</strong>模块内部不要直接读 YAML 或环境变量。配置只能从构造器进来，否则测试里换不掉。</p>
+
+<h3 id="build-5">第 5 步：共享核心（<code>runtime.py</code>，423 行）</h3>
+
+<p>这是最重的一步，也是决定成败的一步。<code>runtime.py</code> 承担三件事：</p>
+
+<ol>
+  <li><strong>状态机</strong>：未启动 / 连接中 / 已连接 / 重连中。所有对外状态都从这里推导。</li>
+  <li><strong>串行化</strong>：同一时刻只处理一条消息，避免并发回调把状态改乱。</li>
+  <li><strong>翻译</strong>：把 transport 递上来的原始消息，经协议层解码，变成公共 Event。</li>
+</ol>
+
+<div class="info-box tip">
+  <span class="ib-icon">💡</span>
+  <div class="ib-content">
+    <p class="ib-title">为什么 Real 和 Mock 共用这一层</p>
+    <p>因为"合同一致"如果是靠纪律保证的——"写 Mock 的时候记得跟 Real 对齐"——它迟早会漂。把两者共同的部分放进 runtime、只让 transport 分叉，"一致"就变成了<strong>结构上的必然</strong>：它们跑的是同一份代码。</p>
+  </div>
+</div>
+
+<h3 id="build-6">第 6 步：transport——真实的与假的（385 / 88 行）</h3>
+
+<p>transport 只做两件事：<strong>把字节搬进来搬出去</strong>，以及<strong>管理连接本身</strong>（建连、断线、重连、背压）。它不认识业务、不发事件、不做判断。</p>
+
+<p>Real 那 385 行基本都花在连接管理上：重连退避、心跳、半包拼接、异常分类。Mock 那 88 行模拟同样的接口——<strong>走同一套方法签名，不是 if 分支</strong>。</p>
+
+<h3 id="build-7">第 7 步：<code>real.py</code> / <code>mock.py</code> 为什么只有 18 行</h3>
+
+<p>因为走到这里已经没有可写的了：共享核心在 runtime，差异在 transport，这两个文件只负责<strong>把对应的 transport 塞进 runtime</strong>。</p>
+
+<pre><code>def create_real(config):
+    return DigitalHumanRuntime(transport=WebSocketRealTransport(config.transport))
+
+def create_mock(config):
+    return DigitalHumanRuntime(transport=WebSocketMockTransport(config.transport))</code></pre>
+
+<p>18 行不是偷懒，是前五步把该分的地方分干净的结果。如果这两个文件涨到 300 行，说明业务逻辑漏进了实现层。</p>
+
+<h3 id="build-8">第 8 步：测试从哪开始（1679 行）</h3>
+
+<p>顺序建议：<strong>协议解码 → runtime 状态机 → transport 重连</strong>。由内向外，每层都能独立测。</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>测试文件</th><th>行数</th><th>测什么</th></tr></thead>
+  <tbody>
+    <tr><td><code>test_protocol.py</code></td><td>179</td><td>帧解析、序号、心跳、畸形输入</td></tr>
+    <tr><td><code>test_runtime.py</code></td><td>1116</td><td>状态迁移、串行化、事件归一化、失败分类</td></tr>
+    <tr><td><code>test_transport.py</code></td><td>242</td><td>建连、断线、重连、半包</td></tr>
+    <tr><td><code>test_config.py</code></td><td>142</td><td>默认值、校验、非法组合</td></tr>
+  </tbody>
+</table></div>
+
+<p><code>test_runtime</code> 最长，因为它要覆盖"连接态 × 消息类型 × 失败原因"的组合——正是最容易出 bug 的地方。默认测试不连真实设备，这就是 Mock 存在的意义。</p>
+
+<h3 id="build-9">第 9 步：接进系统（factory + composition root + 文档）</h3>
+
+<p>最后三件事：</p>
+
+<ol>
+  <li><strong>factory</strong>：根据 Config 决定造 Real 还是 Mock，返回公共 Adapter 类型。</li>
+  <li><strong>composition root</strong>：启动时注册模块、传入 Config。禁用时不构造，运行期不懒加载。</li>
+  <li><strong>两份文档</strong>：README 写机制（职责、公共入口、事件、快照、边界），AGENTS 写给 AI 的规则（能改什么、不能改什么）。</li>
+</ol>
+
+<p class="pitfall"><strong>坑：</strong>不要在 import 时创建实例。模块被 import 不代表它该启动。</p>
+
+<h3 id="build-check">收尾检查表</h3>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>检查项</th><th>不合格的表现</th></tr></thead>
+  <tbody>
+    <tr><td>三个问题都是"是"</td><td>只有一个调用方却包了一层 Adapter</td></tr>
+    <tr><td><code>__init__.py</code> 没有导出 Real / Mock 类</td><td>外部写了 <code>isinstance</code> 判断</td></tr>
+    <tr><td>Snapshot 里没有 <code>use_mock</code> / 类名 / 原始 payload</td><td>测试断言依赖实现细节</td></tr>
+    <tr><td>Event 只有事实，没有命令</td><td>出现 <code>RequestXxxEvent</code> 这类名字</td></tr>
+    <tr><td>模块内没有直接读 YAML / env</td><td>测试里没法改配置</td></tr>
+    <tr><td>Real 和 Mock 跑同一份 runtime</td><td>两份实现各写一遍状态机</td></tr>
+    <tr><td>transport 里没有业务判断</td><td>transport 里出现 <code>if 业务字段 ==</code></td></tr>
+    <tr><td><code>real.py</code> + <code>mock.py</code> 不到 50 行</td><td>涨到几百行，说明逻辑漏进实现层</td></tr>
+    <tr><td>默认测试不碰真实设备</td><td>CI 需要连内网才能跑</td></tr>
+    <tr><td>import 时不创建实例</td><td>跑一次单元测试就发起了网络连接</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="runtime">生命周期与 facade</h2>
+
+<p>所有 Adapter 实例由唯一的 <code>AdapterRuntime</code> 管理，顺序固定：</p>
+
+<pre><code>factory 创建（未启动）
+  → 组装 AdapterSet
+  → 绑定公共 facade
+  → 按稳定顺序逐个 start()
+  → 任一失败：反向清理已进入启动流程的实例 + 解绑 facade
+  → 全部成功：开放外部入口
+
+关闭时严格反向：先停入口与消费者，再停 Adapter，最后解绑。</code></pre>
+
+<p>调用方只通过一个入口拿实例：</p>
+
+<pre><code>from src.adapters import adapters   # 允许在模块顶层 import
+
+def execute(self, tool_input):
+    nav = adapters.navigation      # 只在受控时机解析实例
+    return nav.navigate_to(target)</code></pre>
+
+<p>注意这两行的区别：<strong>import facade 可以，解析实例不行</strong>。因为 import 时 Runtime 可能还没绑定，拿到的是空的。</p>
+
+<h3>为什么禁止构造器注入</h3>
+<p>构造器注入会让"依赖"变成对象的构造前提，于是一串连锁反应：测试要先造 Adapter、启动顺序要人工维护、模块之间开始互相 import 具体类。改成运行期取，所有这些都消失了，代价是"拿到可能为空"——而这个代价被 facade 明确表达为一种可处理的错误。</p>
+
+<h2 id="engine">Engine 的六项准入门槛</h2>
+
+<p>"在进程内运行"是 Engine 的必要条件，不是充分条件。想升级成 Engine Adapter，必须满足六项中的<strong>至少三项</strong>：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>#</th><th>条件</th><th>反例（不满足就别包装）</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>进程级共享实例</td><td>每次调用 new 一个的转换器</td></tr>
+    <tr><td>2</td><td>有需要统一管理的生命周期或资源</td><td>纯函数</td></tr>
+    <tr><td>3</td><td>两个以上独立调用方</td><td>只被一个模块用的策略类</td></tr>
+    <tr><td>4</td><td>需要可替换的稳定公共合同</td><td>内部实现细节</td></tr>
+    <tr><td>5</td><td>发布公共 Event 或提供公共 Snapshot</td><td>只返回布尔值</td></tr>
+    <tr><td>6</td><td>内部状态跨多次调用持续存在</td><td>无状态 helper</td></tr>
+  </tbody>
+</table></div>
+
+<p>这个门槛是<strong>事后加的</strong>。早期版本里几乎所有进程内组件都被包装成了 Engine，结果是为一个十行的格式化函数配了 Factory、Config、Runtime 注册、facade 字段和一整套测试。门槛的作用不是提高标准，而是<strong>给"不要包装"一个可以引用的依据</strong>——否则每次评审都要重新吵一遍。</p>
+
+<div class="info-box warning">
+  <span class="ib-icon">⚠️</span>
+  <div class="ib-content">
+    <p class="ib-title">业务状态机不是 Engine</p>
+    <p>业务状态机属于 <code>domain</code>，不许因为"它在进程内"就塞进 Engine。判断依据是：它管的是<strong>业务规则</strong>还是<strong>技术资源</strong>。</p>
+  </div>
+</div>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

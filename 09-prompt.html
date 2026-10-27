@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>提示词工程 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="prompt 作为代码：模块化拼装、按启用工具渲染、七版共存与两套相反的版本策略。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">提示词工程</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>提示词工程 <span class="page-badge tag tag-pink">09</span></h1>
+
+<p class="lead">这套系统里的 prompt 不是一段写在配置文件里的文本，而是一组能 diff、能测试、能按开关拼装的代码。它最重要的性质是：<strong>模型看不到一个没启用的工具</strong>。</p>
+
+<h2 id="why">prompt 是代码，不是配置</h2>
+
+<p>它放在 <code>src/prompts/</code> 里，和业务代码同一个仓、同一条流水线。配置里只出现版本号，永远不出现文本：</p>
+
+<pre><code>agent:
+  prompt_version: v2_0818   # 只有名字，没有内容</code></pre>
+
+<p>这个选择的直接后果是：改 prompt 是一次代码提交，会进 diff、要过 review、能跑测试。反过来，如果 prompt 存在 YAML 里，改一个字不会有任何测试变红——它悄悄改变系统行为，而没人能证明它变了。</p>
+
+<div class="info-box tip">
+  <span class="ib-icon">💡</span>
+  <div class="ib-content">
+    <p class="ib-title">为什么不用模板引擎</p>
+    <p>模板引擎擅长"填空"，但 prompt 的主要变化不是填空，而是<strong>整段出现或消失</strong>——某个工具没启用，它那一整节说明就不该存在。用 Python 函数返回字符串，判断逻辑和文本放在一起，比在模板里写一堆 <code>{% if %}</code> 更直白。</p>
+  </div>
+</div>
+
+<h2 id="shape">一个版本长什么样</h2>
+
+<p>不是一个大字符串。每个版本是一个包，由几个模块拼成，每个模块是一个返回字符串的函数：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>模块</th><th>行数</th><th>内容</th></tr></thead>
+  <tbody>
+    <tr><td><code>identity.py</code></td><td>5</td><td>身份与不可越界的硬约束（不索取敏感信息、回复长度上限）</td></tr>
+    <tr><td><code>behavior.py</code></td><td>7</td><td>普通对话下的行为边界</td></tr>
+    <tr><td><code>tool_usage.py</code></td><td>93</td><td>业务工具集的用法与决策顺序</td></tr>
+    <tr><td><code>non_business_tool_usage.py</code></td><td>169</td><td>非业务工具（导航、检索等）的用法</td></tr>
+  </tbody>
+</table></div>
+
+<p>拆开的好处很具体：改一条业务规则只动 <code>tool_usage.py</code>，身份设定和通用行为不在同一个 diff 里。审的人一眼能看出这次改的是"身份"还是"流程"。</p>
+
+<p>顺带说一个数字对比：最小的一版 158 行，最大的一版 536 行。<strong>同一个位置的 prompt，体积差了三倍多</strong>——这说明它不是"一次写好"的东西。</p>
+
+<h2 id="assembly">核心：工具说明跟着工具走</h2>
+
+<p>这是整套设计里最关键的一条。<strong>工具说明不是写死在 prompt 里的，而是按实际启用的工具拼出来的。</strong></p>
+
+<pre><code># prompts/tools/weather.py
+REQUIRED = frozenset({"search_weather", "format_forecast"})
+
+def weather_section(enabled_tool_names: frozenset[str]) -&gt; str:
+    if not REQUIRED &lt;= enabled_tool_names:   # ← 不满足，整段不渲染
+        return ""
+    return """## 查天气
+- 客户问天气时调用 search_weather，city 必须来自客户原话。
+- 预报结果用 format_forecast 排版，不要自己编造温度。"""</code></pre>
+
+<p>这段代码的价值不在写法，在它的<strong>失败方式</strong>：只要工具没启用，这一节就不存在，模型不可能看到它、也不可能去调它。</p>
+
+<p>对比手写 prompt 的常见事故：删掉了一个工具，忘了删对应的说明。模型读到了说明，去调一个不存在的工具，报错、重试、绕圈。这类问题在拼装结构里<strong>在语法层面就不可能发生</strong>——不是靠人记得，是靠代码结构。</p>
+
+<div class="info-box tip">
+  <span class="ib-icon">💡</span>
+  <div class="ib-content">
+    <p class="ib-title">可迁移的一条</p>
+    <p>凡是"两处必须保持一致"的地方，别靠纪律，改成<strong>让第二处由第一处生成</strong>。prompt 和工具集的关系就是典型：不是"记得同步"，而是"根本没法不同步"。</p>
+  </div>
+</div>
+
+<h2 id="registry">七个版本怎么共存</h2>
+
+<p>注册表是一个字典：版本名 → 构造函数。不认识的名字直接抛错，并把支持列表打出来——快速失败，而不是悄悄回退到默认值：</p>
+
+<pre><code>_BUILDERS = {"v1": build_v1, "v2": build_v2, ..., "v2_0818": build_v2_0818}
+
+def build(version, enabled_tool_names, *, enabled_corpora=(), business_names=()):
+    try:
+        builder = _BUILDERS[version]
+    except KeyError:
+        raise ValueError(f"unsupported version {version!r}; supported: {sorted(_BUILDERS)}")</code></pre>
+
+<p>难点在<strong>参数演进</strong>：新版本需要新参数，老版本签名里没有。解法是用签名探测决定传不传，老版本一行都不用改：</p>
+
+<pre><code>params = inspect.signature(builder).parameters
+if "destinations" in params:
+    kwargs["destinations"] = tuple(destinations)
+if "queues" in params:
+    kwargs["queues"] = tuple(queues)
+return builder(normalized_tool_names, **kwargs)</code></pre>
+
+<p>七个版本共存的代价是仓库里躺着约 2100 行 prompt 代码。为什么不清掉旧版本？因为<strong>回滚要能用</strong>：现场出问题时，改一行配置就能退回上一版，而不是 revert 一次提交再重新发版。</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>版本</th><th>文件数</th><th>行数</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>v1</code></td><td>4</td><td>260</td><td>初版</td></tr>
+    <tr><td><code>v2</code></td><td>5</td><td>299</td><td>第一轮结构重排</td></tr>
+    <tr><td><code>v2_0812</code></td><td>5</td><td>299</td><td>8 月 12 日版</td></tr>
+    <tr><td><code>v2_0813</code></td><td>5</td><td>324</td><td>8 月 13 日版，次日又改</td></tr>
+    <tr><td><code>v3</code></td><td>5</td><td>158</td><td>精简版，最短的一版</td></tr>
+    <tr><td><code>v4</code></td><td>5</td><td>299</td><td>拆成 identity / behavior / 两类工具用法</td></tr>
+    <tr><td><code>business_v2_0818</code></td><td>6</td><td>536</td><td>最长的一版，当前启用</td></tr>
+  </tbody>
+</table></div>
+
+<p>版本名里带日期（<code>v2_0812</code>、<code>v2_0813</code>）不是随意起的：它记录了<strong>一天一版</strong>的迭代节奏。两个相邻版本只差一天，说明那两天在拿真实对话反复试。</p>
+
+<h2 id="policies">两套相反的版本策略</h2>
+
+<p>同一个仓里还有另一套 prompt，策略完全相反：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th></th><th>对话 prompt</th><th>压缩 prompt</th></tr></thead>
+  <tbody>
+    <tr><td>版本数</td><td>7 个，可配置切换</td><td>1 个实现，版本号写死</td></tr>
+    <tr><td>切换方式</td><td>改配置即可</td><td>写死 <code>v3</code>，其他值直接抛异常</td></tr>
+    <tr><td>为什么</td><td>话术和策略本来就要反复迭代</td><td>输出是<strong>格式契约</strong>，下游要解析</td></tr>
+  </tbody>
+</table></div>
+
+<pre><code>def __post_init__(self) -&gt; None:
+    if self.prompt_version != "v3":
+        raise ValueError("context compression prompt version must be 'v3'")</code></pre>
+
+<p>压缩 prompt 的输出要被程序解析成结构化的摘要和事实，一旦文本格式漂了，解析就崩——所以它<strong>宁可拒绝启动，也不接受第二个版本</strong>。这是同一个团队对两类 prompt 给出的两个相反答案，判断依据是：<strong>漂了谁会疼</strong>。人读的 prompt 可以漂，机器读的不行。</p>
+
+<h2 id="verify">改完怎么知道没变差</h2>
+
+<p>prompt 改动最难的部分不是写，是证明它变好了。靠"聊两句感觉还行"是不成立的，因为模型的行为是分布的，你看到的永远是个位数样本。</p>
+
+<p>做法是建一套离线评测，用固定的 case 集跑：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>指标</th><th>回答什么问题</th></tr></thead>
+  <tbody>
+    <tr><td>工具路由准确率</td><td>该调工具的时候调了吗？调的是对的那个吗？</td></tr>
+    <tr><td>参数差异</td><td>调对了工具，但参数填错了——这类错误比调错工具更隐蔽</td></tr>
+    <tr><td>异常 turn 全量输出</td><td>不只看平均值，把每一个坏掉的 case 原文打出来</td></tr>
+    <tr><td>真实日志离线重放</td><td>拿线上真实对话重跑，比造 case 更接近真相</td></tr>
+    <tr><td>工具耗时聚合</td><td>prompt 改动会让模型多绕几步，耗时是最早暴露的信号</td></tr>
+    <tr><td>多模型对比</td><td>同一版 prompt 在不同模型上的表现，决定该换 prompt 还是换模型</td></tr>
+  </tbody>
+</table></div>
+
+<div class="info-box warning">
+  <span class="ib-icon">⚠️</span>
+  <div class="ib-content">
+    <p class="ib-title">只看总体准确率会骗人</p>
+    <p>两个版本可能总体准确率一样，但<strong>错的 case 完全换了一批</strong>。所以比"准确率涨了几个点"更有用的，是逐条对比"哪些 case 变了、从对变错的是哪几类"。改 prompt 最典型的失败是把一类问题修好、顺手弄坏另一类，而平均值刚好抵消。</p>
+  </div>
+</div>
+
+<p>这套评测的价值不在于给出一个分数，而在于<strong>让 prompt 改动从"信仰"变成"证据"</strong>。有了它，才敢在一天里连改两版。</p>
+
+<div class="info-box info">
+  <span class="ib-icon">🔗</span>
+  <div class="ib-content">
+    <p class="ib-title">和上下游的关系</p>
+    <p>工具集从哪来 → <a href="04-tools.html">04 Tool 体系</a>；压缩 prompt 的输出格式 → <a href="08-compression.html">08 上下文压缩</a>；版本号从配置读入、运行期不可变 → <a href="10-config.html">10 配置体系</a>。</p>
+  </div>
+</div>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

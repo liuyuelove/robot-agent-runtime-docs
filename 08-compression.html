@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>上下文压缩 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="预算模型、有界批次、CAS 提交与两类事实分离。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">上下文压缩</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>上下文压缩 <span class="page-badge tag tag-green">08</span></h1>
+
+<p class="lead">边缘机器的模型窗口有限，长会话必须压缩。但压缩最容易出两类事故：把没办成的事说成办成了，以及压缩任务自己把模型服务打满。</p>
+
+<h2 id="budget">预算模型</h2>
+
+<p>不是"超了就摘要一下"，而是一组互相约束的预算：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>参数</th><th>默认</th><th>作用</th></tr></thead>
+  <tbody>
+    <tr><td><code>threshold_ratio</code></td><td>0.75</td><td>输入占窗口 75% 时触发（软阈值）</td></tr>
+    <tr><td><code>target_ratio</code></td><td>0.60</td><td>压缩后期望降到 60%</td></tr>
+    <tr><td><code>recent_interaction_segments</code></td><td>5</td><td>最近 5 个完整交互段永不压缩</td></tr>
+    <tr><td><code>max_source_tokens_per_call</code></td><td>16384</td><td>单次压缩调用最多读多少原文</td></tr>
+    <tr><td><code>oversized_segment_hard_limit</code></td><td>65536</td><td>单个交互段的硬上限，超过就停止自动重试</td></tr>
+    <tr><td><code>checkpoint_max_tokens</code></td><td>2048</td><td>压缩产物（检查点）的大小上限</td></tr>
+    <tr><td><code>max_calls_per_job</code></td><td>2</td><td>一次压缩任务最多调几次模型</td></tr>
+  </tbody>
+</table></div>
+
+<p>注意 <code>target_ratio</code> 是 0.60 而不是 0.74：压缩一次要留出余量，否则下一轮对话立刻又触发，变成连续压缩。</p>
+
+<h2 id="batch">有界批次</h2>
+
+<p>压缩单位是<strong>完整交互段</strong>（一轮用户 + 一轮助手 + 中间的工具调用），不切碎单轮。</p>
+
+<ul>
+  <li>从最早的段开始成批，凑到 <code>max_source_tokens_per_call</code> 为止；</li>
+  <li>队首单段超过普通上限、但没超过硬上限 → <strong>单独压缩这一段</strong>；</li>
+  <li>超过硬上限 → 只记录一次并停止自动重试，直到会话结束或人工重试；</li>
+  <li>Tool Result 原文<strong>不进压缩模型</strong>（可能很长，且已被投影成结构化事实）。</li>
+</ul>
+
+<h2 id="cas">精确计数 + CAS 提交</h2>
+
+<p>三件事保证了压缩不会把历史改坏：</p>
+
+<h3>1 · 用 <code>/tokenize</code> 而不是本地估算</h3>
+
+<p>复用模型服务的分词接口做精确计数。本地估算在中文、工具调用 JSON、代码块上误差很大，会导致"以为没超、结果超了"。</p>
+
+<h3>2 · CAS 提交</h3>
+
+<pre><code>压缩开始：记录 revision + 候选前缀的 digest
+压缩完成：比对当前 revision 和前缀 digest
+    一致 → 提交检查点
+    不一致 → 丢弃本次结果（历史已经变了）</code></pre>
+
+<h3>3 · 失败即停</h3>
+
+<p>同一 revision 连续失败后不再自动重试，直到会话结束或人工触发。否则会出现"压缩任务和正常对话抢模型服务"——用户那边响应变慢，压缩这边还在重试。</p>
+
+<div class="info-box warning">
+  <span class="ib-icon">⚠️</span>
+  <div class="ib-content">
+    <p class="ib-title">压缩不删原文</p>
+    <p>压缩只产生<strong>派生的检查点</strong>，原始消息一条不删。检查点坏了可以丢掉重建，原文丢了就没了。</p>
+  </div>
+</div>
+
+<h2 id="facts">两类事实必须分开</h2>
+
+<p>压缩产物里有两组内容，混在一起会出大问题：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>类别</th><th>内容</th><th>例子</th></tr></thead>
+  <tbody>
+    <tr><td><code>business_activities</code></td><td>系统<strong>曾协助办理</strong>过什么</td><td>取过号、导航到过某处、打开过某个页面</td></tr>
+    <tr><td><code>confirmed_facts</code></td><td>用户<strong>确认过</strong>的信息</td><td>要办的业务类型、已确认的地点</td></tr>
+  </tbody>
+</table></div>
+
+<p>分开的原因很实在：如果混在一起，模型会对着客户说"您的业务已经办好了"，而实际上只是打开了一个页面。</p>
+
+<div class="info-box danger">
+  <span class="ib-icon">🚫</span>
+  <div class="ib-content">
+    <p class="ib-title">一条不能碰的红线</p>
+    <p>用户的表述、设备的流程结束，都<strong>不能</strong>被升级为"业务办结"事实。只有明确的服务端回执才能。</p>
+  </div>
+</div>
+
+<p>还有一个细节：导航终态即使和业务活动共用同一个 <code>operation_id</code>，也要<strong>独立保留</strong>结构化目的地和到达结果。因为"去过 3 号柜台"和"办过取号业务"是两条不同的记忆，合并会丢掉地点信息。</p>
+
+<h2 id="observe">前端能看到什么</h2>
+
+<p>聊天页有一个圆环，显示 <code>predicted_input_tokens / effective_input_limit</code>：</p>
+
+<ul>
+  <li>只在真实 <code>/tokenize</code> 计数之后显示（不估算、不预测）；</li>
+  <li>后台压缩期间显示动画；</li>
+  <li>压缩结束后保留上一次实测百分比，直到下一次模型调用重新计数；</li>
+  <li>遇到硬上限受阻时，显示受阻状态而不是反复播动画。</li>
+</ul>
+
+<p>这个状态<strong>不写入 Session、不参与业务决策</strong>，纯粹是给人看的。它的存在是为了回答一个很常见的问题："机器人怎么突然变慢了？"——大概率是在压缩。</p>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

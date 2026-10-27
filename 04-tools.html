@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool 体系 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="代码注册、Schema 自动推导与工具集版本化。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">Tool 体系</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>Tool 体系 <span class="page-badge tag tag-purple">04</span></h1>
+
+<p class="lead">18 个能力，模型可以自由选择调用。这一章讲怎么让"加一个能力"只需要写一次声明，而不是在三四个地方各写一遍然后慢慢漂移。</p>
+
+<h2 id="contract">唯一的执行入口</h2>
+
+<pre><code>execute(tool_input) -> tool_output</code></pre>
+
+<p>所有 Tool 都用这一个签名，<strong>不区分只读和副作用</strong>。这是个有意的取舍：分成两类会立刻带来"哪些能并发、哪些要串行、哪些要确认"的矩阵，而这个矩阵在真实场景里永远填不满——比如"查一下附近网点"看起来只读，但它会让机器人开始移动。</p>
+
+<p>需要"这一轮说完就结束，不要再让模型补一句"的情况，用返回值表达，而不是新增一种 Tool 类型：</p>
+
+<pre><code>return ToolExecutionResult(output, ToolReplyControl.FIXED_ONLY)</code></pre>
+
+<p>这个控制标记只活在执行链内部，<strong>不进模型 Schema、不进 Event、不进 Session</strong>——模型不需要知道自己在被收口。</p>
+
+<h2 id="registration">代码注册是唯一事实源</h2>
+
+<p>一个 Tool 长什么样，只在一个地方声明：</p>
+
+<pre><code>ToolRegistration(
+    name="query_calendar",
+    description="查询节假日、调休与工作日推算",
+    input_model=CalendarInput,
+    output_model=CalendarOutput,
+    implementation=CalendarTool,
+)</code></pre>
+
+<p>从这一条注册项自动推导出：</p>
+
+<ul>
+  <li>给模型看的 JSON Schema（从 Pydantic model 推）</li>
+  <li>能力描述（CapabilitySpec）</li>
+  <li>LangChain 包装后的可调用入口</li>
+  <li>启动期的启用校验与类型校验</li>
+</ul>
+
+<p><strong>为什么强调"唯一"</strong>：早期 Schema 是手写的，于是出现了"代码里参数叫 <code>target_date</code>、Schema 里叫 <code>date</code>、prompt 里写 <code>targetDate</code>"的三方漂移，模型时对时错，排查花了很久。自动推导之后这类问题从"难查的运行时现象"变成了"编译期就不存在"。</p>
+
+<h2 id="config">YAML 只管开关和行为参数</h2>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>能放</th><th>不能放</th></tr></thead>
+  <tbody>
+    <tr><td><code>enabled</code></td><td>凭证、endpoint</td></tr>
+    <tr><td>行为参数（超时、阈值、话术模板 ID）</td><td>连接参数、provider、Real/Mock 选择</td></tr>
+    <tr><td>工厂模式下的 <code>kind</code> / <code>factory</code> / <code>config_class</code></td><td>实现类路径、Python 对象</td></tr>
+  </tbody>
+</table></div>
+
+<p>同一字段只能有一个所有者：Tool Config 管"这个能力怎么表现"，Adapter Config 管"连到哪、怎么连"。</p>
+
+<h2 id="versioning">工具集整体版本化</h2>
+
+<p>能力不是一个个上线，而是<strong>整套切换</strong>：<code>agent.toolset_version</code> 指向一个版本目录，里面是当期全部 Tool 的完整集合。</p>
+
+<p>这么做看起来笨（改一个工具要复制整套），但它解决了一个真实问题：<strong>工具集合变了，prompt 也必须跟着变</strong>。如果允许逐个增删，prompt 里"你可以调用 A/B/C"这句话就会和实际注册表脱节，而模型会一本正经地去调一个不存在的工具。整套切换让"工具集 + prompt"成为一个原子版本，回滚时一起回。</p>
+
+<h2 id="errors">错误也是一种输出</h2>
+
+<p>Adapter 不可用、参数越界、外部超时——这些都<strong>不抛异常给模型</strong>，而是转成类型化 Output：</p>
+
+<pre><code>{"ok": false, "reason": "adapter_unavailable", "detail": "..."}</code></pre>
+
+<p>原因很实际：抛异常会让整轮对话失败，用户听到的是沉默；返回结构化失败，模型还能说一句"这个我现在查不了，您可以……"。在服务场景里，<strong>能继续说话比正确更重要</strong>。</p>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

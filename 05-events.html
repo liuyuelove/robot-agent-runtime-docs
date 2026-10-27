@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>事件驱动 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="事实总线、不可变事件与明确不承诺的边界。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">事件驱动</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>事件驱动 <span class="page-badge tag tag-orange">05</span></h1>
+
+<p class="lead">这个系统里的事件只有一个语义：<strong>某件事已经发生了</strong>。不是"请做某事"，不是"我请求"，也不是"回调"。守住这一条，整个系统的因果关系才可读。</p>
+
+<h2 id="fact">事实，不是命令</h2>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>✅ 是事实</th><th>❌ 不是事实</th></tr></thead>
+  <tbody>
+    <tr><td><code>NavigationCompletedEvent</code> 已到达目标点</td><td>"请导航到 3 号柜台"</td></tr>
+    <tr><td><code>ScreenServiceOpenedEvent</code> 页面已打开</td><td>"打开开户页面"</td></tr>
+    <tr><td><code>SpeechStartedEvent</code> 播报已开始</td><td>"说这句话"</td></tr>
+  </tbody>
+</table></div>
+
+<p>命名强制为 <code>&lt;ModulePrefix&gt;&lt;FactName&gt;Event</code>。这不是命名洁癖——一旦允许命令混进总线，就会出现"事件发出去之后，发布者还在等结果"的隐式 RPC，然后超时、重试、顺序全都变成未定义行为。</p>
+
+<h2 id="immutable">事件必须不可变</h2>
+
+<p>所有公共事件的 JSON-like 字段统一用 <code>FrozenJsonValue</code>：递归不可变、可安全序列化。冻结与还原<strong>全项目只有一份实现</strong>，放在事件总线模块里，其他地方只能调用，不许自己写递归。</p>
+
+<p>为什么这么严：曾经有两个模块各自实现了"深度冻结"，对 <code>None</code> 和空字典的处理不一致，导致同一个事件在两个订阅者眼里长得不一样。这类 bug 极难复现，因为它在时间上依赖订阅顺序。</p>
+
+<h2 id="subscriber">订阅不必抢在启动之前</h2>
+
+<p>有一条容易被写错的"通用规则"：所有订阅者都要先于 Adapter 启动。这个项目<strong>明确不这么规定</strong>。</p>
+
+<p>只有一种情况需要提前订阅：模块声明了<strong>无法由 Snapshot 恢复</strong>的关键启动事实。其余订阅者按实际需要建立即可。否则启动顺序会变成一张谁也不敢改的依赖网。</p>
+
+<h2 id="not-promised">明确不承诺的东西</h2>
+
+<div class="info-box warning">
+  <span class="ib-icon">⚠️</span>
+  <div class="ib-content">
+    <p class="ib-title">这些不在系统级保证范围内</p>
+    <p>多线程下的发布顺序、队列容量与满载策略、事件丢弃与可靠转交、同步/异步 stop 协议、全系统幂等、Receiver 异常传播、公共模型版本化。</p>
+  </div>
+</div>
+
+<p>把它们写成"系统保证"是最容易获得虚假安全感的做法。这里的处理方式是：<strong>谁依赖，谁在模块文档里写清自己的适用范围并自己测试</strong>。总线只保证"发布出去的东西不会被篡改"。</p>
+
+<h2 id="why">为什么这个取舍值得</h2>
+
+<p>因为具身系统的因果关系是<strong>多源并发</strong>的：人在说话、底盘在动、屏幕在被点、充电桩在握手，四件事同时发生。如果总线试图保证顺序，它会变成一个巨大的串行化器，把响应速度拖死；如果它假装不关心顺序，上层就必须有能力处理"事实乱序到达"。</p>
+
+<p>选择后者，然后把复杂度关在<strong>少数几个明确的状态协调器</strong>里——比如下一章的暂停矩阵。</p>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

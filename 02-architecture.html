@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分层与边界 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="九层职责、依赖方向与四条硬规则。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">分层与边界</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>分层与边界 <span class="page-badge tag tag-blue">02</span></h1>
+
+<p class="lead">分层的价值不在于"分了九层"，而在于每一层都能被一句话说清"不许做什么"，并且这句话是可以用测试检查的。</p>
+
+<h2 id="layers">九层职责</h2>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>层</th><th>唯一职责</th><th>明确禁止</th></tr></thead>
+  <tbody>
+    <tr><td><code>app</code></td><td>应用与交互生命周期、composition root、确定性协调</td><td>承载业务规则、写 graph node</td></tr>
+    <tr><td><code>agent</code></td><td>LangGraph、state、node、route、模型调用编排</td><td>直接拿 live Adapter、持久化写入、操作设备</td></tr>
+    <tr><td><code>domain</code></td><td>纯业务模型、规则、guard、状态转移</td><td>依赖 app/agent/tools/adapters/SDK/文件系统/环境变量</td></tr>
+    <tr><td><code>tools</code></td><td>模型可调用能力的合同与实现</td><td>创建/管理 Adapter、读 YAML 或环境变量</td></tr>
+    <tr><td><code>adapters</code></td><td>设备、外部服务、进程内 Engine 的稳定边界</td><td>被业务层反向依赖；Hardware/Integration 互相调用</td></tr>
+    <tr><td><code>config</code></td><td>读取、合并、冻结配置树</td><td>集中 import 各模块 parser；运行期重载</td></tr>
+    <tr><td><code>prompts</code></td><td>提示词与工具使用策略</td><td>读 YAML、拿 live Tool/Adapter、访问业务存储</td></tr>
+    <tr><td><code>observability</code></td><td>日志、指标、追踪</td><td>定义业务状态、通过事件总线发命令</td></tr>
+    <tr><td><code>shared</code></td><td>确有跨层价值的基础类型</td><td>变成绕过依赖规则的杂物间</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="deps">依赖方向</h2>
+
+<div class="arch-visual">
+  <div class="av-row av-row-3">
+    <div class="av-node av-browser"><div class="av-node-icon">🖥️</div><div class="av-node-title">app</div><div class="av-node-sub">生命周期 / 协调</div></div>
+  </div>
+  <div class="av-arrow">↓</div>
+  <div class="av-row av-row-4">
+    <div class="av-node av-backend"><div class="av-node-icon">🧠</div><div class="av-node-title">agent</div><div class="av-node-sub">LangGraph</div></div>
+    <div class="av-node av-frontend"><div class="av-node-icon">🧰</div><div class="av-node-title">tools</div><div class="av-node-sub">能力合同</div></div>
+    <div class="av-node av-db"><div class="av-node-icon">📐</div><div class="av-node-title">domain</div><div class="av-node-sub">纯规则</div></div>
+  </div>
+  <div class="av-arrow">↓ 只经由 facade</div>
+  <div class="av-row av-row-4">
+    <div class="av-node av-rag"><div class="av-node-icon">🔌</div><div class="av-node-title">adapters</div><div class="av-node-sub">设备 / 服务 / Engine</div></div>
+    <div class="av-node av-ollama"><div class="av-node-icon">📡</div><div class="av-node-title">event_bus</div><div class="av-node-sub">事实广播</div></div>
+    <div class="av-node av-infra"><div class="av-node-icon">📈</div><div class="av-node-title">observability</div><div class="av-node-sub">只读观测</div></div>
+  </div>
+</div>
+
+<p>箭头只朝下。<code>domain</code> 在最底层且<strong>不依赖任何东西</strong>——它是唯一可以被单独拿去跑测试的层，也是唯一能在不碰任何 IO 的前提下验证业务正确性的地方。</p>
+
+<h2 id="rules">四条硬规则</h2>
+
+<h3>1 · graph node 不许碰 live Adapter</h3>
+<p>node 只做"读 state、决定下一步"。它一旦能拿 Adapter，就会开始写设备、写数据库，然后这个 node 再也测不了。需要动作 → 交给 Tool；需要确定性协调 → 交给 app。</p>
+
+<h3>2 · Tool 不许构造器注入 Adapter</h3>
+<p>构造器注入看起来最"干净"，但它把"谁在什么时候拥有实例"这件事泄漏给了每个调用方。改成<strong>执行时向 facade 取</strong>，好处是：Adapter 未就绪时 Tool 能返回一个明确的"依赖不可用"错误，而不是在 import 期崩掉或者拿到一个半初始化对象。</p>
+
+<h3>3 · Hardware/Integration Adapter 不许调用别的 Adapter</h3>
+<p>否则依赖图会长成一张网，启动顺序无法确定，Mock 也无法隔离。要组合多个外部能力，那是 Engine 或 app 的职责，不是 Adapter 的。</p>
+
+<h3>4 · 配置在启动期一次成型，运行期不可变</h3>
+<p>没有热更新。看起来是倒退，实际上消掉了一整类竞态：不存在"配置读到一半被改了"的状态，也不存在"某个模块用旧值、某个模块用新值"的窗口。</p>
+
+<h2 id="why">为什么这么较真</h2>
+
+<p>因为这个系统的失效模式很讨厌：<strong>它不会崩，它会变得奇怪</strong>。机器人突然不迎宾了、说了两遍"已为您取号"、该回充的时候在闲聊。这类问题没有栈可以看，只能靠"每条事实都有唯一来源、每个状态转移都有唯一入口"来防。</p>
+
+<p>分层不是审美，是<strong>为了让"奇怪"有地方可查</strong>。</p>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

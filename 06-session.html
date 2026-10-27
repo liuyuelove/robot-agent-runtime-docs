@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会话生命周期 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="单活跃会话、人脸驱动的切换、不活跃看门狗与暂停矩阵、双份历史。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">会话生命周期</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>会话生命周期 <span class="page-badge tag tag-pink">06</span></h1>
+
+<p class="lead">系统里任何时刻只有一个活跃会话。真正的难点不是"怎么创建会话"，而是"什么时候该换掉它"——一半由人脸的来去决定，另一半由一张六源暂停矩阵决定。</p>
+
+<h2 id="single">单活跃会话</h2>
+
+<p><code>ActiveSessionManager</code> 是进程内唯一权威：它持有当前 <code>session_id</code>、一组 SSE 订阅队列和激活回调。所有输入都必须带 <code>session_id</code>，不匹配直接拒绝（<code>inactive_session</code>），不会"猜一个最近的会话"。</p>
+
+<div class="info-box info">
+  <span class="ib-icon">🎯</span>
+  <div class="ib-content">
+    <p class="ib-title">为什么不做多会话</p>
+    <p>因为物理前提不成立：一台机器人面前站着一个人。多会话会立刻带来"这段语音属于谁"的归属问题，而答案只能靠猜。</p>
+  </div>
+</div>
+
+<h2 id="sources">会话从哪来</h2>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>来源</th><th>触发</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>迎宾开窗</td><td>进入 <code>RESETTING_STATIONARY</code> / <code>PATROLLING_STATIONARY</code> / <code>CHARGING_STATIONARY</code></td><td>状态机在迁移落账后、reaction 入队前调用一次 session creator</td></tr>
+    <tr><td>人脸锁定</td><td>稳定人脸出现</td><td>最常用的一条；见下节</td></tr>
+    <tr><td>管理平台召唤</td><td><code>POST /v1/web-summon</code></td><td>导航到达后才激活新会话，到达话术不写进召唤前的历史</td></tr>
+    <tr><td>回充到桩</td><td><code>CHARGING_STATIONARY</code> 进入</td><td>保留"到桩建会话"语义，便于充电时也能对话</td></tr>
+  </tbody>
+</table></div>
+
+<p>有一条细节：来自不活跃看门狗的复位链会把 <code>skip_session_creation</code> 置为 <code>True</code>，避免"超时重置 → 回位 → 再建一个会话"这种连环副作用。</p>
+
+<h2 id="face-switch">什么时候换会话：人脸驱动的切换</h2>
+
+<p>这是会话层最复杂的一段，参数全在配置里：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>阶段</th><th>判定</th><th>默认值</th></tr></thead>
+  <tbody>
+    <tr><td>稳定锁定</td><td>同一 <code>face_id</code> 在时间窗内出现足够多帧</td><td>10 帧 / 1.0 s</td></tr>
+    <tr><td>离开去抖</td><td>连续丢失足够帧才认为离开</td><td>10 帧 / 1.0 s</td></tr>
+    <tr><td>离开确认</td><td>去抖通过后再等一段确认时间</td><td>3.0 s</td></tr>
+    <tr><td>继任人脸</td><td>送别完成且新面孔稳定</td><td>独立的一套确认计数</td></tr>
+    <tr><td>档案重注入</td><td>对话进行 N 轮后重新注入档案</td><td>5 轮</td></tr>
+  </tbody>
+</table></div>
+
+<p>为什么要"去抖 + 确认"两段：人转头、低头看手机、被路过的人挡住，都会造成短暂丢帧。只看"这一帧有没有脸"会让会话疯狂地开关。三段判定（帧数 / 时间窗 / 确认期）分别挡住瞬时噪声、抖动和"真的走了"。</p>
+
+<h3>送别与继任</h3>
+
+<p>送别完成、且新面孔稳定之后，编排器会记录一条 <code>face_changed</code> 事实，直接携带<strong>前后两个 face_id、前后两个 session_id、是否重置会话以及原因</strong>。</p>
+
+<p>这条日志是刻意设计的：它只陈述"已经完成的 app 协调事实"，不新增公共 Event。原因是——这件事已经发生了，不需要再广播一次让别的模块去反应；但排查"为什么这个客户的话接不上"时，又必须能一眼看到换人发生在哪一刻。</p>
+
+<h2 id="watchdog">什么时候自动结束：不活跃看门狗</h2>
+
+<p>换会话有两种方式：人脸驱动的切换，和时间驱动的重置。后者看起来简单——"20 秒没人说话就重置"——实际上它是这一章里最长的一段代码，因为它要回答"这 20 秒到底该不该算"。</p>
+
+<h3 id="kinds">三类倒计时，不是一种</h3>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>类型</th><th>何时装载</th><th>默认时长</th></tr></thead>
+  <tbody>
+    <tr><td><code>idle</code></td><td>驻停待机、无对话</td><td>20 s</td></tr>
+    <tr><td><code>moving_welcome</code></td><td>移动迎宾过程中</td><td>5 s（按入口来源再细分）</td></tr>
+    <tr><td><code>charging</code></td><td><strong>进入充电态时不启动</strong>，只有收到聊天输入才启动一轮</td><td>20 s</td></tr>
+  </tbody>
+</table></div>
+
+<p>另外还有两条独立的时间线，不参与上面的超时重置：</p>
+
+<ul>
+  <li><strong>定时移动迎宾</strong>：只在配置的星期与时间窗内（默认 08:00–17:00）启动 600 s 倒计时，到点才出发巡游；</li>
+  <li><strong>唤醒回正</strong>：被唤醒并转向声源后，等待旋转完成，再起 15 s 倒计时回正。</li>
+</ul>
+
+<div class="info-box warning">
+  <span class="ib-icon">⚠️</span>
+  <div class="ib-content">
+    <p class="ib-title">充电态为什么不启动倒计时</p>
+    <p>充电时机器人本来就不该"因为没人说话而离开"。只有客户真的开口聊了，才进入可对话状态并开始计时；超时后回到充电态，但<strong>不改变机器人状态</strong>（不触发回位）。</p>
+  </div>
+</div>
+
+<h3 id="pause-sources">六个暂停源</h3>
+
+<p>倒计时不是简单的"重置计时器"，而是：<strong>任一个暂停源有效就取消计时，全部释放才重新装载一个完整倒计时</strong>（不是续期）。</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>暂停源</th><th>触发事实</th><th>解除</th><th>兜底</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>业务屏占用<br><small>作用于全部倒计时</small></td>
+      <td>页面已打开 / 交易已开始</td>
+      <td>页面退出 / 交易完成 / 异常结束 / 步骤超时 / 业务超时</td>
+      <td>600 s（仅无关联点击）</td>
+    </tr>
+    <tr>
+      <td>导航进行中<br><small>作用于全部</small></td>
+      <td>导航 Accepted</td>
+      <td>导航终态（完成 / 失败 / 取消）</td>
+      <td>导航自身超时</td>
+    </tr>
+    <tr>
+      <td>语音播报中<br><small>作用于全部</small></td>
+      <td>TTS <code>Started</code></td>
+      <td><code>Finished</code> / <code>Interrupted</code> / <code>Failed</code>（需 request_id 匹配）</td>
+      <td>60 s 静默</td>
+    </tr>
+    <tr>
+      <td>人脸在场<br><small>仅 idle、charging</small></td>
+      <td>稳定人脸锁定</td>
+      <td>离开确认</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>人体在场<br><small>仅 idle、charging</small></td>
+      <td>近场检测到人</td>
+      <td>离开去抖</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>机器人状态门禁<br><small>按状态</small></td>
+      <td>状态不允许计时（如 MOVING）</td>
+      <td>状态回到驻停</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<h3 id="semantics">矩阵的两条语义</h3>
+
+<h3>1 · 暂停是"取消"，不是"暂停"</h4>
+
+<p>代码里没有 <code>timer.pause()</code>。暂停 = 把当前 timer 取消掉；恢复 = 用完整时长新建一个。<strong>这样不存在"剩余时间"这个概念，也就不存在"暂停太久导致剩余时间算错"。</strong></p>
+
+<h3>2 · 人体事件是持续事实，不是边沿</h4>
+
+<p>这一条踩过坑。人体检测上报的是"现在有人/没人"，不是"刚刚来了"。如果每收到一次 <code>present</code> 就刷新倒计时，只要人站在那不动、传感器持续上报，倒计时就永远不会到期。</p>
+
+<p>处理方式是：</p>
+
+<pre><code>if 已处于暂停状态:
+    取消计时（保持暂停）
+elif 确认已无人:
+    重新装载完整倒计时
+else:
+    什么都不做（腿在、脸不在，不续期）</code></pre>
+
+<p>配合一个开关 <code>pause_when_human_present_requires_face_present</code>：只有"人 + 脸"同时成立才算有效在场。否则人从机器人背后走过也会一直卡住会话。</p>
+
+<h3 id="fuse">最难的一格：无关联的屏幕点击</h3>
+
+<p>客户直接上手点屏幕时，设备只上报"某通道进入处理中"，<strong>没有 <code>operation_id</code> 能和当前会话对上</strong>。这条路径必须特殊处理：</p>
+
+<ol class="step-list">
+  <li>把该通道临时绑定到当时的活跃会话，暂停倒计时；</li>
+  <li>通道离开处理中（正常终态）→ 解除临时暂停；</li>
+  <li>如果设备再也没报终态（拔网线、断电）→ 600 s 保险丝强制解除；</li>
+  <li>解除后<strong>不因为快照里还残留"处理中"就立刻重新暂停</strong>——否则会陷入"解除 → 立刻暂停"的死循环，必须等到下一次明确的开始事实。</li>
+</ol>
+
+<p>这一格在评审时被推翻过两次，最后单独写了一份事件矩阵设计文档，因为它的正确性无法靠读代码看出来，只能靠穷举。</p>
+
+<h3 id="schedule">定时移动迎宾</h3>
+
+<p>迎宾点驻留时，如果当前在配置的时间窗内，启动一个长倒计时（默认 600 s）；到点就出发巡游一圈，回到迎宾点再开窗。</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>规则</th><th>行为</th></tr></thead>
+  <tbody>
+    <tr><td>总开关关闭</td><td>完全不启动</td></tr>
+    <tr><td>当前星期不在列表</td><td>不启动</td></tr>
+    <tr><td>当前时间不在任一区间</td><td>不启动；已在计时则取消</td></tr>
+    <tr><td>倒计时到期时已离开时段</td><td>跳过本次巡游，不补跑</td></tr>
+    <tr><td>跨午夜区间</td><td>仍按<strong>当前本地日期</strong>的星期匹配，不把已选星期延续到次日凌晨</td></tr>
+  </tbody>
+</table></div>
+
+<p>最后一条是刻意的：如果按"区间起始日"算星期，那么周五 23:00 启动的跨午夜区间会一直有效到周六凌晨，而周六可能本来不在排班表里。</p>
+
+<h3 id="why">为什么值得写 1800 行</h3>
+
+<p>因为这段逻辑的失效方式是<strong>静默</strong>的：计时器早关了一秒，用户话说到一半被重置；晚关一秒，机器人对着空椅子继续说欢迎语。没有异常、没有栈，只有"今天感觉有点怪"。</p>
+
+<p>而它依赖的事实源有六个（状态机、导航、语音、人脸、人体、业务屏），任何一个的上报节奏变化都会影响结果。把它写成一个显式的矩阵，是唯一能评审、能测试、能在改动后确认没退化的方式。</p>
+
+<h2 id="history">会话里存什么</h2>
+
+<p>一个会话有两份历史，用途完全不同，<strong>不能混用</strong>：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th></th><th><code>session.messages</code></th><th>frontend timeline</th></tr></thead>
+  <tbody>
+    <tr><td>用途</td><td>模型上下文</td><td>前端渲染</td></tr>
+    <tr><td>内容</td><td>含 <code>assistant.tool_calls</code>、<code>tool</code> 等协议记录</td><td>只有用户消息、助手消息、工具调用、状态操作</td></tr>
+    <tr><td>维护者</td><td>Runtime / SessionRepository</td><td><code>ConversationEventProjector</code></td></tr>
+  </tbody>
+</table></div>
+
+<p>页面刷新恢复<strong>不读</strong> <code>session.messages</code>——那是给模型看的，里面混着协议字段，直接渲染会露出 <code>tool_call_id</code> 这种东西。前端只信 timeline。</p>
+
+<h3>输入先落库</h3>
+
+<p>正式输入在 admission 阶段就先写一次库（<code>role="user"</code>，带 <code>input_id:user</code> 作为 message_id），然后才执行 graph。这样即使这一轮马上被新输入抢占取消，用户说过的话也不会丢。</p>
+
+<p>每轮都有明确终态：<code>succeeded</code> / <code>failed</code> / <code>cancelled</code>。被取消的回合丢弃缓冲的助手文本，但输入消息以 <code>completion_kind=no_reply</code> 闭合——否则这段历史永远"没结束"，会永久阻塞后续压缩。</p>
+
+<h2 id="timeline">一次会话的完整时序</h2>
+
+<div class="flow-diagram">
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-content-title">人脸稳定锁定</div><div class="flow-content-detail">10 帧 / 1.0 s → 预取 face_profile</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-content-title">创建并激活会话</div><div class="flow-content-detail">旧会话保留历史，新会话成为唯一活跃会话</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-content-title">注入档案与开场</div><div class="flow-content-detail">档案作为 SessionPatch 合入；固定开场话术走模板输出</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-content-title">多轮对话</div><div class="flow-content-detail">输入先落库 → graph → 流式输出 → 终态闭合</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-content-title">送别</div><div class="flow-content-detail">离开去抖 + 3 s 确认 → 固定送别话术</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div></div>
+      <div class="flow-content"><div class="flow-content-title">收尾与继任</div><div class="flow-content-detail">会话记忆摘要 → 若已有继任人脸则直接切换，否则回待机</div></div>
+    </div>
+  </div>
+</div>
+
+<p>注意最后一步：<strong>会话结束和"下一个人开始"是两件事</strong>。中间可能隔很久，也可能只隔一秒（两个人交替）。继任人脸的独立确认计数就是为了处理后者。</p>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

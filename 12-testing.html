@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>测试策略 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="21 个架构守护测试：把规则变成 CI。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">测试策略</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>测试策略 <span class="page-badge tag tag-blue">12</span></h1>
+
+<p class="lead">6.4 万行测试代码，150 多个测试文件。但真正让这个项目没散架的，是其中 21 个不测业务逻辑、只测"代码结构"的测试。</p>
+
+<h2 id="shape">测试的形状</h2>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>层次</th><th>测什么</th><th>约束</th></tr></thead>
+  <tbody>
+    <tr><td>unit</td><td>单个类/函数的合同</td><td>不碰网络、不碰硬件、不碰真实模型</td></tr>
+    <tr><td>integration</td><td>跨模块链路（graph、设备、检索、存储）</td><td>用 Mock Adapter 拼装真实 Runtime</td></tr>
+    <tr><td>e2e</td><td>完整会话流</td><td>固定夹具，可重放</td></tr>
+    <tr><td><strong>architecture</strong></td><td><strong>依赖方向、命名、文档结构、注册表一致性</strong></td><td>纯静态分析（AST），秒级</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="guards">21 个架构守护测试</h2>
+
+<p>它们不做业务断言，只做一件事：<strong>把"不许这么写"变成会红的 CI</strong>。</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>测试</th><th>挡住什么</th></tr></thead>
+  <tbody>
+    <tr><td><code>test_domain_has_no_upward_or_adapter_dependencies</code></td><td>domain 偷偷 import app / adapters</td></tr>
+    <tr><td><code>test_agent_does_not_access_live_adapters</code></td><td>graph node 直接拿设备</td></tr>
+    <tr><td><code>test_adapters_do_not_depend_on_application_layers</code></td><td>Adapter 反向依赖业务层</td></tr>
+    <tr><td><code>test_dispatcher_architecture_is_absent</code></td><td>有人重新引入集中分发器</td></tr>
+    <tr><td><code>test_json_freeze_algorithms_exist_only_in_event_bus</code></td><td>各模块自制深度冻结</td></tr>
+    <tr><td><code>test_public_events_are_frozen_slotted_dataclasses</code></td><td>事件可变、可被订阅者改写</td></tr>
+    <tr><td><code>test_public_adapters_have_contract_structure_and_docs</code></td><td>新 Adapter 没 README / AGENTS</td></tr>
+    <tr><td><code>test_yaml_modules_match_code_registration_tables</code></td><td>YAML 与代码注册表对不上</td></tr>
+    <tr><td><code>test_tool_registration_names_are_provider_neutral</code></td><td>工具名里混进厂商名</td></tr>
+  </tbody>
+</table></div>
+
+<p>为什么值得写这些？因为<strong>规则文档只能约束愿意读的人</strong>。12 个人加 AI 生成代码，靠 review 拦不住"顺手 import 一下"。把规则写成 AST 断言之后，违反规则不再是"评审意见"，而是<strong>提交就红</strong>。</p>
+
+<p>而且它顺手解决了 AI 协作的核心问题：AI 不会读完全部文档，但它会读测试报错。</p>
+
+<h2 id="mock">Mock 合同一致性</h2>
+
+<p>Real 和 Mock 必须导出同一组类型，测试里有一条专门检查公共 Adapter 包<strong>不导出</strong> <code>real.py</code> / <code>mock.py</code> 里的类——调用方只能拿到合同，拿不到实现。</p>
+
+<p>这条看起来吹毛求疵，实际上挡住了一类很隐蔽的退化：某天有人为了图快，在业务代码里 <code>isinstance(adapter, MockChassis)</code> 做分支。一旦允许，Mock 就从"测试替身"变成了"运行期分支条件"。</p>
+
+<h2 id="no-real">默认测试不碰真实世界</h2>
+
+<p>默认用例不依赖真实模型、网络或硬件。这带来两个好处：</p>
+
+<ul>
+  <li>CI 能在没有设备的环境跑全量；</li>
+  <li>测试结果稳定，不会因为模型服务抖一下就红一片。</li>
+</ul>
+
+<p>代价是：<strong>测试通过不等于现场能跑</strong>。所以还保留了独立的联调脚本和夹具回放，专门覆盖"真实设备行为与 Mock 假设不一致"的情况。</p>
+
+<h2 id="docs">测试即文档</h2>
+
+<p>每个模块 README 的最后一节固定是"测试"：列出关键测试文件路径 + 一条最小验证命令。想知道一个模块怎么用，比读实现更快的方式是读它的测试。</p>
+
+<pre><code>pytest -q tests/unit/adapters/test_adapter_runtime.py</code></pre>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>机器人状态机 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="15 个状态、转移矩阵、事件转发矩阵、reaction 与回充链路。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">机器人状态机</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>机器人状态机 <span class="page-badge tag tag-purple">07</span></h1>
+
+<p class="lead">15 个状态、两张矩阵、8 个 reaction 模块。这是整个系统里唯一一个"能做什么"和"能听见什么"都由配置文件决定的地方。</p>
+
+<h2 id="states">15 个状态</h2>
+
+<p>命名规则是 <code>&lt;场景&gt;_&lt;MOVING|STATIONARY&gt;</code>。用 <code>STATIONARY</code> 而不是 <code>STANDING</code>，因为语义是"停止移动"，不是"站着"。</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>组</th><th>含义</th><th>两个子状态</th></tr></thead>
+  <tbody>
+    <tr><td><code>RESETTING_*</code></td><td>回位（导航复位 / 巡检复位）</td><td>回位途中 / 到位</td></tr>
+    <tr><td><code>WELCOMING_*</code></td><td>固定迎宾点</td><td>驶向迎宾点 / 驻留开窗</td></tr>
+    <tr><td><code>IDLING_*</code></td><td>待机</td><td>移动中 / 驻停</td></tr>
+    <tr><td><code>BUSINESS_*</code></td><td>业务办理</td><td>带路中 / 停在业务点</td></tr>
+    <tr><td><code>PATROLLING_*</code></td><td>巡检</td><td>巡检移动 / 巡检驻留</td></tr>
+    <tr><td><code>GREETING_*</code></td><td>移动迎宾（巡游）</td><td>巡游中 / 停驻</td></tr>
+    <tr><td><code>CHARGING_*</code></td><td>回充</td><td>前往充电桩 / 已驻桩</td></tr>
+    <tr><td colspan="2"><code>EMERGENCY_STOPPED</code></td><td>急停（无 MOVING 变体）</td></tr>
+  </tbody>
+</table></div>
+
+<p>启动状态固定为配置里的 <code>initial_state</code>（默认 <code>IDLING_STATIONARY</code>），然后由一次<strong>启动对账</strong>修正到实际物理状态（见本章末尾）。</p>
+
+<h2 id="transition">矩阵一：状态转移（15 × 15）</h2>
+
+<p>行是当前状态，列是目标状态，<code>1</code> 表示允许、<code>0</code> 表示拒绝。<strong>对角线是 1</strong>——允许"切到自己"，用来吃掉重复请求。</p>
+
+<div class="table-scroll wide"><table>
+  <thead><tr><th>当前 ↓ / 目标 →</th><th>IDLING_S</th><th>BUSINESS_S</th><th>CHARGING_S</th><th>EMERGENCY</th></tr></thead>
+  <tbody>
+    <tr><td><code>RESETTING_MOVING</code></td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+    <tr><td><code>IDLING_STATIONARY</code></td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+    <tr><td><code>BUSINESS_STATIONARY</code></td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+    <tr><td><code>CHARGING_STATIONARY</code></td><td>✓</td><td>·</td><td>✓</td><td>✓</td></tr>
+    <tr><td><code>EMERGENCY_STOPPED</code></td><td>✓</td><td>·</td><td>·</td><td>✓</td></tr>
+  </tbody>
+</table></div>
+
+<p class="muted-note">（片段示意，完整矩阵在配置文件里，共 15 行 × 15 列）</p>
+
+<p>几条被写进注释的硬规则，每一条都对应一次线上问题：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>规则</th><th>为什么</th></tr></thead>
+  <tbody>
+    <tr><td>MOVING 不能直接到 MOVING</td><td>否则会出现"一边走一边改目的地"，底盘指令互相覆盖</td></tr>
+    <tr><td>所有闲置态都能进充电</td><td>低电量必须随时能走</td></tr>
+    <tr><td>急停可以从任意状态进入，但只能自环或解除到 <code>IDLING_STATIONARY</code></td><td>安全态不允许"恢复到急停前"——那个状态可能已经不安全了</td></tr>
+    <tr><td><code>RESETTING_MOVING</code> 必须能回到所有能进入它的驻停态</td><td>导航失败补偿；否则会卡在回位途中出不来</td></tr>
+    <tr><td><code>CHARGING_MOVING</code> 不能直达 <code>IDLING_STATIONARY</code></td><td>必须经过到桩确认，避免"没插上电就走了"</td></tr>
+    <tr><td>电源事实硬迁可为任意状态开 <code>→ CHARGING_STATIONARY</code></td><td>物理插电就是事实，不需要经过导航</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="forwarding">矩阵二：事件转发（15 × 18）</h2>
+
+<p>这张矩阵决定<strong>某个状态下，哪些事实能被"听见"</strong>。18 个源事件分四类：Brain Input（4）、Brain Output（8）、运动感知（6：环形麦方位、人体存在/离开、人脸候选、HumanExist/NoExist）。</p>
+
+<p>转发的产物固定命名为 <code>RobotStateAware</code> + 原类名，不在配置里重复声明。</p>
+
+<div class="table-scroll wide"><table>
+  <thead><tr><th>状态 ↓</th><th>BrainInputReceived</th><th>LLM 流式分片</th><th>环形麦方位</th><th>人体在场</th><th>HumanExist</th></tr></thead>
+  <tbody>
+    <tr><td><code>IDLING_STATIONARY</code></td><td>✓</td><td>✓</td><td>·</td><td>·</td><td>·</td></tr>
+    <tr><td><code>CHARGING_STATIONARY</code></td><td>✓</td><td>✓</td><td>·</td><td>·</td><td>·</td></tr>
+    <tr><td><code>EMERGENCY_STOPPED</code></td><td>✓</td><td>✓</td><td>·</td><td>·</td><td>·</td></tr>
+    <tr><td><code>PATROLLING_MOVING</code></td><td>·</td><td>✓</td><td>✓</td><td>✓</td><td>·</td></tr>
+    <tr><td><code>GREETING_MOVING</code></td><td>·</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+  </tbody>
+</table></div>
+
+<p class="muted-note">（片段示意，按类别各取一个代表列；完整矩阵 15 行 × 18 列）</p>
+
+<p>三条贯穿规则：</p>
+
+<ul>
+  <li><strong>MOVING 状态屏蔽 Brain Input</strong>——机器人在走路时不该"听见"用户说话，否则会把路过的一句话当成需求；但 <strong>Brain Output 全部转发</strong>，因为正在播报的内容需要被追踪。</li>
+  <li><strong>STATIONARY 默认全放行 Brain I/O</strong>，只屏蔽运动相关事实（人已经在面前站定，不需要再靠"有人经过"来判断）。</li>
+  <li><strong>运动事实只在对它有意义的状态放行</strong>：环形麦方位只在 4 个状态转发（迎宾驻留、回位途中、巡检移动、移动迎宾），人体在场只在 3 个状态转发。</li>
+</ul>
+
+<div class="info-box tip">
+  <span class="ib-icon">💡</span>
+  <div class="ib-content">
+    <p class="ib-title">这张矩阵的真正价值</p>
+    <p>它把"机器人在什么状态下应该听见什么"从一个散落在十几个 if 里的隐式约定，变成了一张能评审、能测试、能一眼看出矛盾的表格。新增一个状态时，你必须同时回答 15 个"能不能转过去"和 18 个"要不要转发"。</p>
+  </div>
+</div>
+
+<h2 id="capability">状态能干什么：能力准入</h2>
+
+<p>转移矩阵只回答"能不能过去"，不回答"在这个状态能不能执行某个动作"。动作有各自的准入，通常是<strong>矩阵边 + 来源白名单</strong>双重判定。</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>能力</th><th>准入</th><th>拒绝时</th></tr></thead>
+  <tbody>
+    <tr><td><code>navigate</code> / <code>rotate</code> / <code>translate</code></td><td>矩阵允许 + 非急停</td><td><code>emergency_stopped</code>，不创建 operation、不下发底盘</td></tr>
+    <tr><td><code>start_patrol</code> / <code>pause_patrol</code></td><td>矩阵允许</td><td>状态冲突码</td></tr>
+    <tr><td><code>start_recharge</code>（普通回充）</td><td>矩阵边 + 白名单 <code>{IDLING_STATIONARY, WELCOMING_STATIONARY}</code></td><td><code>charge_state_not_allowed</code></td></tr>
+    <tr><td><code>force_recharge</code>（临界电量）</td><td>白名单 <code>{IDLING_S, WELCOMING_S, BUSINESS_S, PATROLLING_S}</code>，任意驻停无条件出发</td><td>整单拒绝，不污染在途 operation</td></tr>
+    <tr><td><code>leave_charging</code>（被动离开充电）</td><td>仅 <code>CHARGING_STATIONARY</code></td><td>状态冲突，不改变状态</td></tr>
+  </tbody>
+</table></div>
+
+<p>为什么普通回充要拒绝 <code>BUSINESS_STATIONARY</code> 和 <code>PATROLLING_STATIONARY</code>：矩阵边已经为"强制回充"开放了这两行，如果不加白名单，普通回充会顺着这条边泄漏进去——<strong>客户正在办业务，机器人却因为电量策略走开了</strong>。这条叫"防泄漏"，是评审时专门加的。</p>
+
+<h2 id="triggers">什么导致转移</h2>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>触发事实</th><th>目标</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>导航完成</td><td><code>RESETTING_STATIONARY</code> / <code>CHARGING_STATIONARY</code> / <code>GREETING_STATIONARY</code></td><td>按 operation 上下文判定是哪种目的地</td></tr>
+    <tr><td>导航失败（起步前）</td><td>回到来源态，或兜底 <code>IDLING_STATIONARY</code></td><td>来源不可回退时兜底，避免卡死在 <code>RESETTING_MOVING</code></td></tr>
+    <tr><td>导航失败（起步后）</td><td><code>IDLING_STATIONARY</code></td><td>不伪造"回到原地点"，不建新会话</td></tr>
+    <tr><td>迎宾自然完成 / 人工停止</td><td><code>GREETING_STATIONARY</code> → <code>RESETTING_MOVING</code></td><td>先停驻，再调远端复位，等复位完成后才进 <code>RESETTING_STATIONARY</code></td></tr>
+    <tr><td>巡检停止 / 完成</td><td>回迎宾点</td><td>巡检有独立复位协议，不复用普通导航 reset</td></tr>
+    <tr><td>电源事实 <code>charging|full</code></td><td><code>CHARGING_STATIONARY</code></td><td>硬迁，除急停外任意状态（含 MOVING）</td></tr>
+    <tr><td>急停 <code>True</code></td><td><code>EMERGENCY_STOPPED</code></td><td>任意状态，且优先于充电事实</td></tr>
+    <tr><td>急停 <code>False</code></td><td><code>IDLING_STATIONARY</code></td><td>仅当当前是急停态；不恢复急停前的状态</td></tr>
+    <tr><td>会话不活跃超时</td><td><code>RESETTING_MOVING</code></td><td>由看门狗发起，带 <code>expected_source_state</code> 防误伤</td></tr>
+    <tr><td>空闲关键词命中</td><td><code>RESETTING_MOVING</code></td><td>仅 <code>IDLING_STATIONARY</code> 下生效</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="reaction">转移之后做什么：reaction</h2>
+
+<p>状态转移只负责"落账"。落账之后要做的事分成两类，执行时机完全不同：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>类型</th><th>例子</th><th>执行时机</th></tr></thead>
+  <tbody>
+    <tr><td>提交后必执行</td><td>创建会话</td><td>迁移落账后<strong>同步</strong>执行</td></tr>
+    <tr><td>仅当前 revision 有效</td><td>发起导航、开启迎宾、巡检动作</td><td>进入<strong>单线程队列</strong>，执行前校验 revision</td></tr>
+  </tbody>
+</table></div>
+
+<p>这个区分很关键：会话创建是"已经决定了必须做"的事，晚一步就会丢；而"发起导航"可能在排队期间状态又变了，所以执行前必须确认自己还是最新的那一次。</p>
+
+<p>reaction 按领域拆成 8 个模块：<code>face</code> / <code>face_state</code> / <code>idling_reset</code> / <code>navigation</code> / <code>patrol</code> / <code>charging</code> / <code>greet</code> / <code>digital_human</code>。它们只响应事件，不各自做第二套状态转移——状态只有 <code>_commit_transition()</code> 一个出口。</p>
+
+<h3>顺带同步数字人</h3>
+
+<p>每次真实迁移都会同步一次数字人运动状态，映射规则是纯命名约定：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>状态</th><th>数字人 status</th></tr></thead>
+  <tbody>
+    <tr><td>所有 <code>*_MOVING</code></td><td><code>0</code></td></tr>
+    <tr><td>所有 <code>*_STATIONARY</code></td><td><code>2</code></td></tr>
+    <tr><td><code>CHARGING_STATIONARY</code>（且禁止聊天显示时）</td><td><code>6</code></td></tr>
+  </tbody>
+</table></div>
+
+<p>不做去重，每次迁移直接转发。因为数字人侧是有状态的，去重反而会让它和真实状态漂移。</p>
+
+<h3>三个迁移日志</h3>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>事件</th><th>时机</th><th>级别</th></tr></thead>
+  <tbody>
+    <tr><td><code>robot_state.transition.changed</code></td><td>真实变化</td><td>INFO</td></tr>
+    <tr><td><code>robot_state.transition.rejected</code></td><td>矩阵拒绝</td><td>WARNING</td></tr>
+    <tr><td><code>robot_state.transition.idempotent</code></td><td>接受但状态未变</td><td>DEBUG</td></tr>
+  </tbody>
+</table></div>
+
+<p>三者共用一个出口，字段统一带 <code>source_state</code> / <code>target_state</code> / <code>requested_by</code> / <code>revision</code> / <code>error_code</code>。<strong>日志写失败不影响迁移结果</strong>。</p>
+
+<h2 id="charging">回充：最复杂的一条链路</h2>
+
+<p>回充是状态机里唯一有"两个入口 + 局部幂等 + 上下文对账"的链路，值得单独说。</p>
+
+<h3>两个入口，共用一条提交路径</h3>
+
+<pre><code>start_recharge()   普通回充（定时 / 低电量）
+force_recharge()   临界电量强制回充
+        \          /
+         _submit_charge()
+              |
+    状态准入（各自白名单）
+              |
+    （仅 force 且来源为巡检驻留时：轻量停巡，不 reset 回起点）
+              |
+    通过 Public Navigation 提交导航到充电桩
+              |
+    登记 operation，由导航终态收口</code></pre>
+
+<h3>局部幂等：复用而不是新建</h3>
+
+<p>如果同一个目的地已经有一个自己创建的 operation 在跑（已 Accepted/Started、未收终态），再来一次 <code>start_recharge()</code>：</p>
+
+<ul>
+  <li>复用原 <code>operation_id</code>，不创建第二个导航；</li>
+  <li>Receipt 返回 <code>accepted=True</code> 但 <code>changed=False</code>；</li>
+  <li>原 operation 的终态仍按原上下文收口。</li>
+</ul>
+
+<p>如果导航里存在一个<strong>不是自己创建的</strong>同目标 operation，则不接管、不登记，直接返回 <code>navigation_busy</code>。这条幂等只属于回充控制器自己拥有的 operation，<strong>不是系统级保证</strong>。</p>
+
+<h3>上下文对账：revision 重钉</h3>
+
+<p>处理导航事件前，先检查自己持有的上下文是否还有效：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>情况</th><th>动作</th></tr></thead>
+  <tbody>
+    <tr><td>当前状态名 ≠ 上下文期望状态名</td><td>作废上下文，不处理本事件，不推进状态</td></tr>
+    <tr><td>状态名相同但 revision 变了</td><td>只重钉 revision，继续处理</td></tr>
+  </tbody>
+</table></div>
+
+<p>关键在于<strong>不因为"revision 不同"就作废</strong>——revision 会因为无关的迁移而增加，一看到不同就丢上下文会导致回充永远收不了尾。</p>
+
+<h3>两条离开路径</h3>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>路径</th><th>入口</th><th>目标</th><th>语义</th></tr></thead>
+  <tbody>
+    <tr><td>主动退出</td><td><code>reset()</code></td><td><code>RESETTING_MOVING</code></td><td>要回迎宾点</td></tr>
+    <tr><td>被动离开</td><td><code>leave_charging()</code></td><td><code>IDLING_STATIONARY</code></td><td>充电对账确认失败，不走了，就地待机</td></tr>
+  </tbody>
+</table></div>
+
+<p>两条路径的 <code>requested_by</code> 不许混用。被动离开不调导航、不发底盘停止命令、不建会话——它只是"承认这次充电没成"。</p>
+
+<h3>电源事实硬迁</h3>
+
+<p>物理插电时，底盘会报 <code>charging|full</code>。这条事实会让状态机<strong>从任意状态（除急停）直接跳到 <code>CHARGING_STATIONARY</code></strong>，包括 MOVING。</p>
+
+<p>迁完会清理所有运动残留（导航、回充、巡检、迎宾、环形麦的上下文），但<strong>不调导航取消、不发底盘停止</strong>——因为物理插电本身就意味着已经静止了。</p>
+
+<p>反向（<code>discharging</code>）<strong>不迁移</strong>。拔电退出统一交给 app 层的断充确认窗口处理。原因是：如果在状态机里立刻硬释放，那个 20 秒的确认窗口会在 1 毫秒内空转。</p>
+
+<h2 id="emergency">急停与启动对账</h2>
+
+<h3>安全态优先</h3>
+
+<pre><code>任意状态 -- 急停 True --> EMERGENCY_STOPPED
+EMERGENCY_STOPPED -- 充电事实 charging/full --> 忽略（不覆盖）
+EMERGENCY_STOPPED -- 急停 False --> IDLING_STATIONARY</code></pre>
+
+<p>急停由导航适配器发布，状态机自己<strong>不推断</strong>急停（普通导航失败不等于急停）。急停态允许聊天，但禁止一切运动能力。</p>
+
+<p>解除只能由解除事件驱动。手动 API 可以切入急停，但<strong>不能从急停态手动解除</strong>——安全态不允许被软件按钮放开。</p>
+
+<h3>启动对账</h3>
+
+<p>进程启动时状态固定是配置的初始值，但机器人可能正插着电、或者急停按钮被按下。所以全部 Adapter 启动完成后会延迟（默认 5 秒）做一次<strong>level 对账</strong>：</p>
+
+<pre><code>优先级：急停 > 充电 > 默认
+
+导航快照 emergency_stop 为真（或读取失败）→ EMERGENCY_STOPPED
+充电快照 connected 且非 stale 且 power_state ∈ {charging, full} → CHARGING_STATIONARY
+否则 → 保持启动默认态</code></pre>
+
+<p>为什么要延迟 5 秒：需要等导航和充电客户端连上并交付第一条事实。数据 stale / 未知 / 未装配时一律 <strong>fail-closed</strong>，不迁充电。</p>
+
+<p>对账是幂等的——已经在目标态就不迁移、不 bump revision。运行期之后的变化仍由事件驱动，不重复收敛。</p>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

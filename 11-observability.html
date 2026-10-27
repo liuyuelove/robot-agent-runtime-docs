@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>可观测性 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="单行 JSON 日志、按 Run 聚合耗时与脱敏边界。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">可观测性</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>可观测性 <span class="page-badge tag tag-green">11</span></h1>
+
+<p class="lead">这类系统的 bug 大多不是崩溃，而是"行为不对"。没有栈可看，只能靠日志重建因果。所以日志在这里不是调试附属品，是主要证据链。</p>
+
+<h2 id="schema">单行 JSON，固定 schema</h2>
+
+<p>每个进程写自己的时间戳文件，超过阈值滚动分片：</p>
+
+<pre><code>logs/20260101-120000-123.jsonl
+logs/20260101-120000-123.jsonl.000001</code></pre>
+
+<p>每条记录都带：</p>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>字段</th><th>作用</th></tr></thead>
+  <tbody>
+    <tr><td><code>ts</code></td><td>固定时区 ISO 时间戳</td></tr>
+    <tr><td><code>event</code></td><td>点分命名的事件名，如 <code>agent.model.request.prepared</code></td></tr>
+    <tr><td><code>process_instance_id</code></td><td>区分同机多次启动</td></tr>
+    <tr><td><code>session_id / run_id / trace_id</code></td><td>跨文件、跨分片聚合同一轮交互</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="timing">按 Run 分解耗时</h2>
+
+<p>一个分析脚本可以把一次 Run 拆成阶段耗时：</p>
+
+<pre><code>会话加载 → pre-graph → Graph → 模型推理 → 工具执行 → 输出 → 状态提交</code></pre>
+
+<p>再加上里程碑（tool call 生成、tool result 可用、最终回答生成）相对循环起点的时间。这套东西让"这轮为什么慢"从猜测变成读数：是模型首包慢、是某个工具卡住、还是持久化拖尾。</p>
+
+<div class="info-box tip">
+  <span class="ib-icon">💡</span>
+  <div class="ib-content">
+    <p class="ib-title">跨进程聚合</p>
+    <p>同一个 <code>run_id</code> 可能横跨多个进程文件和多个滚动分片，分析脚本会合并后再算，不会因为重启把一次 Run 切成两半。</p>
+  </div>
+</div>
+
+<h2 id="content">内容开关 ≠ 脱敏</h2>
+
+<div class="info-box danger">
+  <span class="ib-icon">🚫</span>
+  <div class="ib-content">
+    <p class="ib-title">关掉正文采集不等于脱敏</p>
+    <p>关掉 <code>include_content</code> 只是不记对话正文；日志里仍然有用户标识、业务元数据、错误分类和栈帧位置。生产环境必须配合目录访问控制、保留期和审计策略。</p>
+  </div>
+</div>
+
+<p>这条写进文档是为了防止一种很常见的误判：以为"我把正文关了所以日志可以随便传"。日志本身就是敏感资产。</p>
+
+<h2 id="disk">磁盘水位</h2>
+
+<p>边缘设备磁盘小，日志写满会把整机搞死。所以有一组水位阈值：正常 → 高位（减少正文采集）→ 严重 → 耗尽（只记骨架）。恢复时带滞回，避免在阈值附近反复抖动。</p>
+
+<p>设计上还有一条：<strong>日志系统的任何失败都不许改变业务语义</strong>。写日志失败不能让一次对话失败。</p>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

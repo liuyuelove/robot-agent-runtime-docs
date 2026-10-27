@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 协作开发 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="用唯一准则目录与架构测试约束人和 AI 的协作。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">AI 协作开发</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>AI 协作开发 <span class="page-badge tag tag-purple">13</span></h1>
+
+<p class="lead">7.8 万行代码、2.5 个月、12 个人——其中相当一部分是 AI 生成的。这一章讲怎么让 AI 写出来的代码不像"另一个项目"。</p>
+
+<h2 id="problem">问题不在生成，在收敛</h2>
+
+<p>AI 写单个函数的能力早就够了。真正的问题是：</p>
+
+<ul>
+  <li>它会给每个模块都造一套自己的抽象（第 5 种 Config 加载方式、第 3 个事件基类）；</li>
+  <li>它会"顺手"补一个你没要求的 helper，然后这个 helper 长成了第二个入口；</li>
+  <li>它读不到三个月前的决策上下文，于是把已经否决的方案重新提一遍。</li>
+</ul>
+
+<p>所以核心不是"让 AI 更聪明"，而是<strong>给它一个唯一的事实源，并且让违反它的成本立刻可见</strong>。</p>
+
+<h2 id="single-source">唯一准则目录</h2>
+
+<p>仓库里有一个目录，被声明为<strong>唯一正式准则</strong>，优先级高于所有旧文档和当前代码形态：</p>
+
+<pre><code>docs/standards/
+  ├── 0 - README.md              地位、用语、文档地图
+  ├── 1 - architecture.md        组件关系、依赖方向、生命周期
+  ├── 2 - adapters.md            分类、Real/Mock、Engine 门槛
+  ├── 3 - tools.md               注册、Schema 推导、配置边界
+  ├── 4 - events.md              事实语义、命名、不可变
+  ├── 5 - io-bus.md              输入输出总线
+  ├── 6 - config.md              合并、类型化、启动校验
+  ├── 7 - module-docs.md         README/AGENTS 必需章节
+  └── 8 - migration.md           迁移步骤与验收清单</code></pre>
+
+<p>配套的是一条硬规定：<strong>旧文档、旧 ADR、当前代码都不能覆盖它</strong>。旧资料里有价值的细节，必须经过评审写进这个目录，才能成为规则。</p>
+
+<p>这条规定看着霸道，但它解决了一个致命问题：AI 会在多个互相矛盾的文档之间随机选一个遵循。只要存在"两个都算数"的文档，一致性就没了。</p>
+
+<h2 id="agents">AGENTS.md：给 AI 的工作规则</h2>
+
+<p>根目录一份 <code>AGENTS.md</code>，内容不是项目介绍，而是<strong>操作约束</strong>：</p>
+
+<ul>
+  <li>改代码前必须先读哪几份文档（按任务类型映射）；</li>
+  <li>先把改动归类到十种职责之一，再动手；</li>
+  <li>标准顺序：定归属 → 改文档 → 写测试 → 改实现 → 跑模块测试 → 接主链路；</li>
+  <li>不许覆盖与任务无关的改动；不许在 import 期创建 Adapter；不许写第二套入口。</li>
+</ul>
+
+<p>每个公共模块还有第二份文档 <code>AGENTS.md</code>：<strong>README 给人看，AGENTS 给 AI 看</strong>。前者讲"这个模块是什么"，后者讲"改这个模块时不许做什么"。</p>
+
+<h2 id="guard">最后一道防线是测试</h2>
+
+<p>文档约束意愿，测试约束结果。第 <a href="12-testing.html#guards">12 章</a>那 21 条架构守护测试，本质上就是<strong>把准则目录里的"必须/禁止"翻译成断言</strong>。</p>
+
+<p>这是整个协作机制里最关键的一环：AI 可能不读完 9 份文档，但它一定会读测试报错。报错信息里写着"你 import 了 src.adapters 的具体实现"，比任何评审意见都有效。</p>
+
+<h2 id="cost">代价</h2>
+
+<div class="info-box warning">
+  <span class="ib-icon">⚠️</span>
+  <div class="ib-content">
+    <p class="ib-title">这套机制很贵</p>
+    <p>写准则目录、维护双文档、写 21 条架构测试——这些都不产生任何用户可见功能。项目早期为它付了一个多星期的时间，而且是团队里最枯燥的一周。</p>
+  </div>
+</div>
+
+<p>它划算的前提是：<strong>项目要活过三个月、要进新人、要有 AI 参与</strong>。如果是一次性原型，这套东西是纯粹的负担。</p>
+
+<p>还有一条反作用：准则本身会过时。项目中期就出现过"准则里写着必须 A，但实践中证明 B 更好"的情况，处理方式是<strong>先改准则再改代码</strong>，而不是让代码先跑偏再补文档。这个顺序一旦反过来，准则目录就废了。</p>
+
+<h2 id="takeaway">可迁移的三条</h2>
+
+<ol>
+  <li><strong>让"唯一事实源"真的唯一</strong>——允许两个文档都算数，等于没有文档。</li>
+  <li><strong>把规则写成断言，而不是写成建议</strong>——能自动检查的规则才有约束力。</li>
+  <li><strong>给人看的文档和给 AI 看的文档分开</strong>——前者解释 why，后者约束 must/must not。</li>
+</ol>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

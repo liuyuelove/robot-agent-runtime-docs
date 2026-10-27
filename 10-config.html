@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>配置体系 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="三级合并、启动期类型化与不可变运行配置。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">配置体系</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>配置体系 <span class="page-badge tag tag-gray">10</span></h1>
+
+<p class="lead">配置的目标只有一个：让"启动成功"这件事有意义。要么全部合法，要么根本起不来，不存在"起来了但某个模块拿的是默认值"。</p>
+
+<h2 id="merge">三级合并</h2>
+
+<pre><code>config.yaml        可提交的共享默认值
+  &lt; config.env     本机差异与敏感覆写（禁止提交）
+  &lt; 进程环境变量    最高优先级</code></pre>
+
+<p>环境变量用双下划线表达层级，大小写不敏感：</p>
+
+<pre><code>APP__MODEL__BASE_URL=http://192.0.2.10:7001/v1
+APP__AGENT__DISPLAY_NAME=Local Agent</code></pre>
+
+<p>环境变量<strong>只能覆写数据值</strong>，不能注入类路径或工厂函数。否则配置就变成了远程代码执行入口。</p>
+
+<h2 id="typed">启动期类型化</h2>
+
+<div class="flow-diagram">
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-content-title">读取 + 合并</div><div class="flow-content-detail">三个来源合成一棵原始配置树</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-content-title">确定启用集合</div><div class="flow-content-detail">哪些模块 / 工具 / Adapter 实际启用</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div><div class="flow-line"></div></div>
+      <div class="flow-content"><div class="flow-content-title">逐模块构造类型化 Config</div><div class="flow-content-detail">只构造已启用的；任一校验失败 → 阻止启动</div></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-step-connector"><div class="flow-dot"></div></div>
+      <div class="flow-content"><div class="flow-content-title">冻结</div><div class="flow-content-detail">不可变对象，注入到最小必要范围</div></div>
+    </div>
+  </div>
+</div>
+
+<p>通用配置层<strong>不认识</strong>任何具体模块的字段。它只负责读取、合并、冻结原始树和报告结构错误；具体字段的解析器属于各自模块，由 composition root 按启用集合去调用。这样加一个模块不需要改通用层。</p>
+
+<h2 id="disabled">禁用模块不构造</h2>
+
+<p>一个模块没启用，它的配置可以完全不合法——不校验、不构造、不 import 实现。这条规则省掉了大量"为了通过启动校验而写的假配置"，也避免了"配置看着有、其实没生效"的错觉。</p>
+
+<p>同时明确：<strong>禁用模块不许运行期懒加载</strong>。想用就重启，不支持"用的时候再打开"。</p>
+
+<h2 id="immutable">不可变的代价</h2>
+
+<p>不支持热更新，改配置必须重启。在云服务里这几乎是不可接受的，在机器人上是合理的：</p>
+
+<ul>
+  <li>重启代价是几秒，而"配置改了但只有一半模块生效"的排查代价是几小时；</li>
+  <li>运行期不可变消掉了一整类竞态（不存在读到半新半旧配置的窗口）；</li>
+  <li>现场运维本来就很少改配置，改的时候有人在旁边。</li>
+</ul>
+
+<p>这是<strong>用部署形态换来的简化</strong>，不是通用最佳实践。换个场景结论可能反过来。</p>
+
+<h2 id="ownership">字段所有权</h2>
+
+<div class="table-scroll"><table>
+  <thead><tr><th>配置</th><th>拥有</th><th>不拥有</th></tr></thead>
+  <tbody>
+    <tr><td>Tool Config</td><td>行为参数（阈值、超时、模板 ID）</td><td>凭证、endpoint、provider</td></tr>
+    <tr><td>Adapter Config</td><td>凭证、endpoint、连接超时、重试、Real/Mock 选择</td><td>业务规则</td></tr>
+    <tr><td>模块 Config</td><td>该模块自身开关与参数</td><td>其他模块字段</td></tr>
+  </tbody>
+</table></div>
+
+<p>同一字段只能有一个所有者。这条规则挡住的最常见错误是：同一个超时值在 Tool 和 Adapter 里各配一份，然后某天只改了一处。</p>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>
