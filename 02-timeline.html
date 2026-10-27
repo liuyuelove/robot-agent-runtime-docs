@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="C20oAUlRlWA1zqtG7wKbCx">
+<head data-page-node-id="d5UMYQof2JH1JAts9NbdJP">
+<meta charset="UTF-8" data-page-node-id="5lFRmApZ6Yqt6CJXg1zY62">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="zWiiBFBFwLe2zIXuOhjFoj">
+<title>端到端时序 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="一次对话从声波到播报的九跳、T0-T12 时间轴、三条打断路径与可观测锚点。" data-page-node-id="9866hynl9pBFH13C8d3DUx">
+<link rel="stylesheet" href="assets/style.css" data-page-node-id="nHahY8Opn6TMnjVLLOBOMD">
+</head>
+<body data-page-node-id="w0R23D1kxboOG6irgqBLWK">
+<div class="layout" data-page-node-id="Q0zn13hW4LC7B8k25kMblg">
+  <aside class="sidebar" id="sidebar" data-page-node-id="U0HD1jLKZ4hn9gdYWwz4en">
+    <div class="sidebar-header" data-page-node-id="VKCRMHtNdtqFSkGfmQFJXV">
+      <a class="sidebar-logo" href="index.html" data-page-node-id="gpfZrLNxAfsZQ6vIbsLZWs">
+        <span class="logo-icon" data-page-node-id="50KOh3e7FHcEgikHbjIzWS">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle" data-page-node-id="1EZBNUSDDMtIfQ29yXgwDG">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version" data-page-node-id="QDHgYphtqJc2jgZO2uagSu">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav" data-page-node-id="ogo3UokigvzhWIlE6I5Szb"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay" data-page-node-id="6wpMsbR2cCCZ1TgGwMlrBb"></div>
+  <div class="main" data-page-node-id="QK7s1Y2UZeyOT0cPvSkhHS">
+    <header class="topbar" data-page-node-id="1AbF0WtbaCVpHRmS2wYvBj">
+      <button class="topbar-mobile-btn" id="sidebar-toggle" data-page-node-id="eaXJoBg1GzFytcdvuBsh16">☰</button>
+      <nav class="breadcrumb" data-page-node-id="Mj5hD6HikU9v8pSvssE3Vi">
+        <a href="index.html" data-page-node-id="TA2RkdEjVr2MekqI5H6SHW">笔记</a>
+        <span class="breadcrumb-sep" data-page-node-id="VIDnl23k0oTj0Zd5wPda3m">/</span>
+        <span class="breadcrumb-current" data-page-node-id="CgZuqtPo5Th0wa5tykiviM">端到端时序</span>
+      </nav>
+      <div class="topbar-links" data-page-node-id="K56i1tjp7jWKHSW4lS274t">
+        <a class="topbar-link" href="index.html" data-page-node-id="m6RDcsWTfvY3aUPnAtSUyt">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper" data-page-node-id="pDiGBAWjLYBjH0HJcGuFNH">
+      <article class="article" data-page-node-id="G1ib1DAcgCURJaHod0GWwF">
+
+<h1 data-page-node-id="emkkSzadNAtEGuds25IBaz">端到端时序 <span class="page-badge tag tag-blue" data-page-node-id="AyQx48O00GET5UCVa29Hkp">02</span></h1>
+
+<p class="lead" data-page-node-id="HPm2coInBy3v2RkXDiKQ1h">上一章给的是边界，这一章给的是时间。同样一条链路，换成按「谁在什么时候产生了什么事实」读一遍——包括那些不翻代码根本想不到的绕路。</p>
+
+<h2 id="map" data-page-node-id="KmqG6syeQqz7XYj1DYzpWX">九跳：一次对话穿过哪些环节</h2>
+
+<p data-page-node-id="vdwGyD0qIREbDMfy0uUsOc">先给位置，再给时间。下面这张表是纵向的：从声波进来到声音出去，一共九跳。</p>
+
+<div class="table-scroll" data-page-node-id="EXrDHaBtjwMFzCnJcg49L1"><table class="tl-table" data-page-node-id="koJCIDnyzY7LmyLgwvnE0w">
+  <thead data-page-node-id="twYEpsoi3DwSw31JNfLHjQ"><tr data-page-node-id="kdQkiOyYem1FTrOxmSoIJ6"><th data-page-node-id="YEm9FM9hFP8Xc5VOOUGQE7">#</th><th data-page-node-id="ervCl3CXdliaOUjhY9FE12">从 → 到</th><th data-page-node-id="QVWtmx2XEoa6c7eF7u9w7X">经手的东西</th><th data-page-node-id="IdDFAvBC162o8GTP6M1nOx">谁能在这里拦下它</th></tr></thead>
+  <tbody data-page-node-id="MsXLI1YccUJ2t5eEXjFgGW">
+    <tr data-page-node-id="LVvP2qZD45yH0FASIm17qI"><td data-page-node-id="3VpWrDRQscrnGU5rE20PWN">1</td><td data-page-node-id="6orgYU0LMFpTWaX85OosKL">声波 → 识别文本</td><td data-page-node-id="Im4GBh8hHwW4tpUuGEw41M">环形麦 → ASR transport</td><td data-page-node-id="4BtATDwEcaV9anUms5v7Yr">唤醒词、VAD 端点判定</td></tr>
+    <tr data-page-node-id="7uhzq52UKI4HqYsH8kPcg3"><td data-page-node-id="8v8X5lWhs5oHAwMnlYxdR1">2</td><td data-page-node-id="5nhQJ58vWyXGDqCGlBCQqW">识别文本 → 输入事实</td><td data-page-node-id="awyVRerPdTCTGgkNsVz7AQ">SpeechInputBridge → Brain Input</td><td data-page-node-id="idw1GRIZ1ae06CMPAdIBGx">活跃会话匹配、空文本丢弃</td></tr>
+    <tr data-page-node-id="GO5QMPM1Zf2Wi2CTDTajup"><td data-page-node-id="3zEjEyIHsuLfMs9MBuuy6J">3</td><td data-page-node-id="YoCOhlhI1TV3BwngTyVJ5w">输入事实 → 状态感知事实</td><td data-page-node-id="kFY8LtcSDbJNIltarsYCqh">RobotState 转发矩阵</td><td data-page-node-id="duM9eZBJCgabZ8Vm3Nxlmk"><strong data-page-node-id="V0y77kngzoa5NkhJo2KDNw">转发矩阵</strong>——这一跳最容易被读漏</td></tr>
+    <tr data-page-node-id="3oV4fFLKcL54hjKOzgjEFB"><td data-page-node-id="hUCnYhNtUgRtjVxZAzHEq2">4</td><td data-page-node-id="GqsKqeKJphcvLM0JFqcf5e">状态感知事实 → 一次 run</td><td data-page-node-id="ATu9weHu1DDcCtbTLvuzFm">Input Ingress → Run Coordinator</td><td data-page-node-id="NLXWPpFnRO0otfg1bsHmbk">抢占规则、排队顺序</td></tr>
+    <tr data-page-node-id="FK1L5N9cB8Q8nGCYSgvN96"><td data-page-node-id="ISEpgh77eFWFzDGfWgQmCt">5</td><td data-page-node-id="MNx5hfTlSFXyIaPzP7hTDP">run → 模型增量</td><td data-page-node-id="UeYqAk9pwxT3UDzcdm6RnS">Agent（LangGraph）</td><td data-page-node-id="ta7fIQ5zWDUe1ZCnRlnGlG">上下文预算、工具调用上限</td></tr>
+    <tr data-page-node-id="fkDI9FbJB2SGfEZ1L8sGp3"><td data-page-node-id="8cW8VliimAVZhP3cDXFtIm">6</td><td data-page-node-id="zwkyzmLCU8tce7XHmdsAcB">增量 → 输出事实</td><td data-page-node-id="w9woTglLUh9fcMoEjU2BXw">Brain Output</td><td data-page-node-id="dGqaq6RSsDyrwWCQkwty37">合同校验、sequence 生命周期</td></tr>
+    <tr data-page-node-id="d60GEVvLcx5YJ1Nlgkljvc"><td data-page-node-id="bpIjseZohOIdSj1UZ12mYw">7</td><td data-page-node-id="eM6iDJmQ9iNQBFGKW3yslx">输出事实 → 字幕</td><td data-page-node-id="GlHQ3RUKiORUea02EhimRc">UI Display Bridge → SSE</td><td data-page-node-id="8JaTPF7lrGHhopNfbigYb2">前端连接状态</td></tr>
+    <tr data-page-node-id="pweTy9ClEym6IhnArlydHI"><td data-page-node-id="06xhtPQJfObYfhe6HT3glg">8</td><td data-page-node-id="Eh5ekjdPZrFHaF4nSkLtnD">输出事实 → 声音</td><td data-page-node-id="0DYnxJM4ACGDo91jpfi6nE">Speech Output Coordinator → Streaming TTS</td><td data-page-node-id="RpUxhe0zWzgPK4LigFwhfI">切段阈值</td></tr>
+    <tr data-page-node-id="FIVqpJPGR0Rdn8GYAdiBdS"><td data-page-node-id="xQkSU3ZdFtSPFmjxA279Up">9</td><td data-page-node-id="tqsXreAdyqN63lZd4lPMkA">播报状态 → 数字人</td><td data-page-node-id="qFIhjoenSEaLjuhOkBJyS7">Digital Human Adapter</td><td data-page-node-id="sjDKHkbrrO8C5hFdotE3Gr">运动状态防抖</td></tr>
+  </tbody>
+</table></div>
+
+<p data-page-node-id="MquI5je9YjyHYqtl8keXvs">注意第 3 跳：<strong data-page-node-id="ksP8JpBR4VlkCkexc9Q2Jn">输入不是直接进模型的</strong>。它要先去状态机那儿领一次「现在允许被听见」的许可。这一跳没有任何日志会告诉你「被拦了」，因为「没听见」本身就是设计。</p>
+
+<h2 id="timeline" data-page-node-id="Il5upggoUsMcPtnWQ93JwK">时间轴：T0 到 T12</h2>
+
+<p data-page-node-id="Gpu2uABH5WDSR9gmGJIi7E">把上面九跳摊在时间上，就是下面这张表。最后一列是「站在用户面前能看到什么」——排查问题时，这一列往往比日志更快定位到断在哪一跳。</p>
+
+<div class="table-scroll" data-page-node-id="En4EktqHPk6c3lQzmLsiqC"><table class="tl-table" data-page-node-id="TzQh1qxgenfKYFHGC6mCGj">
+  <thead data-page-node-id="CE9zmDQqXEi8lXwJhkdiPK"><tr data-page-node-id="jOGEGFwJWIbCyaGgZnH8AJ"><th data-page-node-id="eSC5YLhzVqC4v9Pc0Nu15T">时刻</th><th data-page-node-id="sQ1T0OPmgX8SUii2nFhUHI">发生了什么</th><th data-page-node-id="G3r877HHSae2rceI3QIFpR">产生的公共事实</th><th data-page-node-id="OH5gGnI94NZ6z8Il67LByw">用户能感知到什么</th></tr></thead>
+  <tbody data-page-node-id="pFqp3P0B43jaMztBXzh5Gy">
+    <tr data-page-node-id="W2egEVFkjj58eARGdnhsE4">
+      <td data-page-node-id="YXP1zVco6ztmcdp88UGvpp"><strong data-page-node-id="tYGCjQV0uymlvbW9SqkqzM">T0</strong></td>
+      <td data-page-node-id="GDTpGvanWCFJr5G3DAphUP">人走近，或说出唤醒词；环形麦给出声源方位，人体感应给出「有人」</td>
+      <td data-page-node-id="9iPB1yLF8YkYXsa1F4prVM">运动感知类事实（方位 / 在场 / 人脸候选）</td>
+      <td data-page-node-id="l3HRFwriML7d0NvMFtpfxw">还没有反应</td>
+    </tr>
+    <tr data-page-node-id="oVRO9I3wFI7GBD85UQZPRH">
+      <td data-page-node-id="nw6bEkjctwWw9MNF3OLPF0"><strong data-page-node-id="7dFhBOFKsbAj7nM2mHZugL">T1</strong></td>
+      <td data-page-node-id="xMEyDAUoXRJxFEsvmi4aNC">状态机判断「这个事实在当前状态下要不要听」</td>
+      <td data-page-node-id="0qECACwwZTJXh3J9ffyWFC">放行则产出 <code data-page-node-id="oAcBMpTPpAxdoNdqF1oFC7">RobotStateAware*</code>；不放行则到此为止</td>
+      <td data-page-node-id="WZQL38mIH1jd4otY5eGwyJ">仍然没有反应</td>
+    </tr>
+    <tr data-page-node-id="ge7SRvDH06t1t2ZSCgTG49">
+      <td data-page-node-id="ijNefiVmZ01guFUvVsBaYZ"><strong data-page-node-id="GbD4ybBNTKJ1OYMgu9599g">T2</strong></td>
+      <td data-page-node-id="kmkTXDHwdP3wf1ZYfDjnKu">会话激活或切换：新建会话、清空上一轮的聊天显示</td>
+      <td data-page-node-id="gsqRvUYOx26qEMRcKkfZTX">会话激活回调（ASR 与数字人同时被通知）</td>
+      <td data-page-node-id="bLqoW7VfAmxyuec06E9PBI">屏幕亮起、数字人抬头、聊天记录清空</td>
+    </tr>
+    <tr data-page-node-id="PHuzAfsSPzt7frt0ZthWcH">
+      <td data-page-node-id="mg5hRE0D5K5YxBCEWoJtPY"><strong data-page-node-id="4oPHcHSOovMppJzAFlOBWt">T3</strong></td>
+      <td data-page-node-id="ZDe2hjZatM1JF8mQnKxPUX">ASR 绑定到当前会话，开始收音</td>
+      <td data-page-node-id="ed1cqYWMYJ0ADbXBH8bYfR"><code data-page-node-id="UvCE3kHZ4ZbZWgnMH523lA">SpeechInputPartial<wbr data-page-node-id="BWXyyrB8vA1BC4EBkPZCio">Recognized<wbr data-page-node-id="3S9vljACKyNuW8FaEMdrxC">Event</code></td>
+      <td data-page-node-id="GNUo5uGm4AceKvXq39uikW">屏幕上出现<strong data-page-node-id="FDJkx64T5mkdpnZB8F7ITi">实时字幕</strong>，边说边出</td>
+    </tr>
+    <tr data-page-node-id="EMv0tLl1IpmElf5UKJ47MZ">
+      <td data-page-node-id="DJLKnyZc0DCG7RC4uUa3cl"><strong data-page-node-id="BHYrdtaBFCPDxlg0cBECMJ">T4</strong></td>
+      <td data-page-node-id="dEHN0gooYTprGQxcyCV29p">VAD 判定说完，ASR 给出最终结果</td>
+      <td data-page-node-id="tek68daE8BHyH1xfqUBDR0"><code data-page-node-id="NT35H9xDUPfRht00RFfK0e">SpeechInputFinal<wbr data-page-node-id="y08gTFKItZA0Ys2QIwd0Wy">Recognized<wbr data-page-node-id="lZHs2uHLZCbT34swSTfAON">Event</code></td>
+      <td data-page-node-id="c5bubBIIpYYNtl2CIgFiTz">字幕定格，不再变化</td>
+    </tr>
+    <tr data-page-node-id="GpAUEy46DQErbJyBBFvCX6">
+      <td data-page-node-id="LbrW8biEBcyo0LekzZxwgA"><strong data-page-node-id="bVwDPEo63LHKZXSDfFsSw7">T5</strong></td>
+      <td data-page-node-id="UW5QFaoHDMxWIPkT4kCY2O">输入被本地接受：校验、去重、补 session_id</td>
+      <td data-page-node-id="EyU1Q7NGehwDiyXYOasOFK"><code data-page-node-id="XYNwQzD0YoJdn5PLnbSBwu">BrainInput<wbr data-page-node-id="wMGy7aWRq6K9crQ4EGELNi">Received<wbr data-page-node-id="DRJ6d9fRBxpyOEOvtJkWQ0">Event</code></td>
+      <td data-page-node-id="j9XsKd9vuAdCHeTjdWKETn">上一轮播报<strong data-page-node-id="YSh5R8zfZyJkoOQmWpnDJr">立刻停</strong>，并响一声提示音</td>
+    </tr>
+    <tr data-page-node-id="jzFaAewgAdLAKyfuRlGMJL">
+      <td data-page-node-id="o1fFJdCbZub4JIxEMIjiph"><strong data-page-node-id="mQOFsYOERnk1mWsEhMHU35">T6</strong></td>
+      <td data-page-node-id="bkkPkHPkszBts0RCnK9xFr">这条输入再过一次转发矩阵，拿到「可以进推理」的许可</td>
+      <td data-page-node-id="YWnsJufox2duUPuNhSS28Y"><code data-page-node-id="9NtwP0UmUgdnebdEL1SId6">RobotStateAwareBrainInput<wbr data-page-node-id="PgkEQxZhcD0b6JTMUlqFFF">Received<wbr data-page-node-id="velGt046UdfSshgn4PtS3P">Event</code></td>
+      <td data-page-node-id="THgeAMaOZFJiIOq9rVTkyG">无</td>
+    </tr>
+    <tr data-page-node-id="lKpyOmT7x7K9V3m5H2fKqX">
+      <td data-page-node-id="cgyFZ7mvGRT1Ew5NBNkYfX"><strong data-page-node-id="BZiXtNJnZDoMvwByU0do0p">T7</strong></td>
+      <td data-page-node-id="6BIhhh4aYxEz6ijtVdyxuf">装配上下文，模型开始输出</td>
+      <td data-page-node-id="gIUxyWJ1uatpKsLOBmCo8J"><code data-page-node-id="iBNnaQnEC9YrXNfTdPHdIF">BrainOutput<wbr data-page-node-id="HrIXCogjlwYVhAfvNR1uVk">LlmStream<wbr data-page-node-id="Xx0jnod02Do4c3M0gCTIVg">Started<wbr data-page-node-id="kXlepvhc0KZXIGBBZjWiVH">Event</code></td>
+      <td data-page-node-id="osCvl10PH3MearIX3BJg9C">数字人开始有动作（口型待命）</td>
+    </tr>
+    <tr data-page-node-id="guYSJQT3Iz29tI40dADU2e">
+      <td data-page-node-id="sGPjRHduGy5T2KpimOp0dh"><strong data-page-node-id="bVAFcCymFGBg0hRAnM8zWE">T8</strong></td>
+      <td data-page-node-id="smbkIv0kPySHEJPNI9rbJB">第一段增量文本到达</td>
+      <td data-page-node-id="P18orqlZKSANhnjpQ49Qgc"><code data-page-node-id="DlDX9yDWMfpevm7bdXCc47">BrainOutput<wbr data-page-node-id="4CrA1zibxCOvteTMwJvRDo">LlmStream<wbr data-page-node-id="Ymfi0xJBW9Seilj46E5l6x">ChunkAppended<wbr data-page-node-id="i0fcZ5fd8P86pqFCKmgk34">Event</code></td>
+      <td data-page-node-id="wKTP1AKcQwelQT1AbSlGwH">字幕逐字出现；<strong data-page-node-id="JxGH2Hocz7Q3GkH4rlKPBm">同时</strong>开始说话</td>
+    </tr>
+    <tr data-page-node-id="lki0GGDqBouFGh5tJBHaii">
+      <td data-page-node-id="pE5eUGcwpzfJ60CVA6JRBF"><strong data-page-node-id="AJc7yg6IWtthRngDjlHHoT">T9</strong></td>
+      <td data-page-node-id="a4kTbk7SQflYYKw5s1T7RR">模型决定调用工具</td>
+      <td data-page-node-id="otVVXMqMU2H3R34xzTmu4M"><code data-page-node-id="7VxY8rKx757A9rAynUamgE">BrainOutput<wbr data-page-node-id="W4AQYdc7vGriBwGQgAm4LC">ToolCall<wbr data-page-node-id="R56bqJgBHlGCtEN0CU7n10">Requested<wbr data-page-node-id="UCfwKzACLkVq088kmHJNYe">Event</code></td>
+      <td data-page-node-id="X6TkGjnG5s7auU1BmBrySw">屏幕上出现工具卡片；可能需要一句「稍等」</td>
+    </tr>
+    <tr data-page-node-id="GMquGsW4h4I797jdzcXd4n">
+      <td data-page-node-id="C4ShRZSAPlGhtLnNNpYb1w"><strong data-page-node-id="9EXhxVQ7ZciBDS4IcWaWuv">T10</strong></td>
+      <td data-page-node-id="76deCbHorp60UjGRgTAmUp">工具返回，模型带着结果继续输出</td>
+      <td data-page-node-id="VBjpyOpzuK93tsM99T39B4"><code data-page-node-id="eRZkPn5iqLRPGVPY4SDVtb">BrainOutput<wbr data-page-node-id="Bqdag5DUtm0uGuPfRcWTUh">ToolCall<wbr data-page-node-id="8xf6MwJF3CjKXEA2rsAiCo">ResultPublished<wbr data-page-node-id="MNx2vBbHNxCFz6laGmu5KC">Event</code> + 新 chunk</td>
+      <td data-page-node-id="UGEGlEXuBHm09Khzjweb8B">继续说，内容里带上了工具的结果</td>
+    </tr>
+    <tr data-page-node-id="cxAxW6b297XgsDOVZN24DW">
+      <td data-page-node-id="oIFdzeUEFc6uptvEloJlKY"><strong data-page-node-id="NnnbBGGrdjAorkncSyaHX4">T11</strong></td>
+      <td data-page-node-id="UKkjBCZgbFTxeZCYBRvXMz">本轮输出结束</td>
+      <td data-page-node-id="I2GkSozg9P7i0XHXJ9B0Sb"><code data-page-node-id="ynkFOIHlYzXQbFpYoQwTBO">BrainOutput<wbr data-page-node-id="ehx7PDOgcl88sLCeykCbG9">LlmStream<wbr data-page-node-id="l7SdVJqmrFAaXZSz3Dd64p">Completed<wbr data-page-node-id="un7NssO38A75rvVD4bSiXv">Event</code></td>
+      <td data-page-node-id="z4ZgpUKZr7VPeNlLR9iFvO">说完；字幕保留在屏幕上</td>
+    </tr>
+    <tr data-page-node-id="72yTpMaGNgd4ITQZyUIISD">
+      <td data-page-node-id="MnK7BVHkHSux6FnaUheOSw"><strong data-page-node-id="Zx2QXA3FI4Yp8AhK5A4y92">T12</strong></td>
+      <td data-page-node-id="L6aNV84XI4EPrPTSL0saHx">会话进入等待，看门狗开始计时</td>
+      <td data-page-node-id="IeUkYhNbHUwAlANvLdTM0D">无（计时器不是事实）</td>
+      <td data-page-node-id="NkpuoUrED7jWCOCiaewtEw">无——但这一段时间决定会话什么时候结束</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<div class="info-box warning" data-page-node-id="sUZtwPwpG5DAA4iE5CpUvn">
+  <span class="ib-icon" data-page-node-id="h05NOG0oseEEnpVaOWar21">⚠️</span>
+  <div class="ib-content" data-page-node-id="bVxO8SmDmPfMXLuFgm53Y7">
+    <p class="ib-title" data-page-node-id="gEsg3riU0NqNR19ZRBZGeb">T5 和 T6 是同一件事的两次事实</p>
+    <p data-page-node-id="I4dtyYJ9FZ8PI7CwRMmjIA">一次是「输入被本地接受」，一次是「输入被状态机放行」。中间夹着转发矩阵——所以「用户说了话」和「模型听见了话」<strong data-page-node-id="kWRHKuCYAujCfZddACIC4N">不是同一时刻</strong>。把这两件事合成一件，后面所有关于「为什么它没反应」的排查都会失焦。</p>
+  </div>
+</div>
+
+<h2 id="hop-input" data-page-node-id="h4Mq2km0Zz4a4aktRoDF0p">为什么输入要绕状态机一圈</h2>
+
+<p data-page-node-id="PhNAvMHWM5pvZ9GNcqC0Gp">因为 Brain Input 只做三件事：校验、去重、补 <code data-page-node-id="IZlZ4P8mnuCDzs3xSbXWNS">session_id</code>。它<strong data-page-node-id="5snl5Iydn1x6FhiCBjTfNK">不判断</strong>「现在该不该听」。判断权在状态机的转发矩阵里。</p>
+
+<p data-page-node-id="l0LC2R0PfqJHS2leVurDHA">后果很直接：换个状态，同一句话的命运就完全不同。</p>
+
+<div class="table-scroll" data-page-node-id="HvBtgGkT48WsAii67kuSEs"><table data-page-node-id="F5SAmSmNreNFBiQSBWpkJF">
+  <thead data-page-node-id="Jg2rMozK3e16A9MbpWXsVE"><tr data-page-node-id="UAySSzGUtMnU2iyqAXGa8b"><th data-page-node-id="QMYFvmXGkAhDfP42Gkm0EQ">当前状态</th><th data-page-node-id="MPWyVfxd6ickJcyx6swmqA">用户说「带我去三号柜台」</th><th data-page-node-id="O46yWKPR6XicqQHtfEnYfz">结果</th></tr></thead>
+  <tbody data-page-node-id="dcbtX9EtfKJVtkkqFgddSN">
+    <tr data-page-node-id="Ojb4fr6kpSjbm2vBB4sLjH"><td data-page-node-id="igfXNL9dtpb2EQdfXoeMlF"><code data-page-node-id="qcJyjwLgarXeCBih3WytIN">IDLING_STATIONARY</code></td><td data-page-node-id="0GPQU3moQLpRBFVjvBepEq">放行</td><td data-page-node-id="hb1PC7Jc03WS9vfnDp5s9c">正常进入推理</td></tr>
+    <tr data-page-node-id="ftNmBKxFR0VMq5gAxVpCre"><td data-page-node-id="zSeE4BjBaltv8FLOahnmgo"><code data-page-node-id="inZCDRd85GHHxxUBfZSUaT">BUSINESS_STATIONARY</code></td><td data-page-node-id="rA8pI7G6vRcVPwGHV5HwB0">放行</td><td data-page-node-id="7ePKTaIkAMukCyoVJ8AXhF">正常进入推理</td></tr>
+    <tr data-page-node-id="LKW342CSheeSgeLVisVp0N"><td data-page-node-id="PpClS5BVNDe3kzKKVoCKVn"><code data-page-node-id="yAsz7oYx03GLlz1ADxDFg2">IDLING_MOVING</code></td><td data-page-node-id="sMrik7ddHarJR0r14jL1rk">拦下</td><td data-page-node-id="nTA17AKqU9OYq4C7kzSW67">模型完全不知道有这句话</td></tr>
+    <tr data-page-node-id="QbCEwJuGb2LznO75gzro8G"><td data-page-node-id="HKOVrTPpB9bwwVtcfbnUy7"><code data-page-node-id="OUmb8uoFRtUQVXxmoVsLyf">WELCOMING_MOVING</code></td><td data-page-node-id="BwxR0ZcyRFkXJ2ReggrosX">放行</td><td data-page-node-id="GDQrR4P6sfIpsnCbSDhoHu">正常进入推理——移动迎宾要边走边听</td></tr>
+  </tbody>
+</table></div>
+
+<p data-page-node-id="agYBsHsWOAgKABj2TggsbQ">这张表的第三行是这套设计最容易被误判成 bug 的地方：机器人在走，用户在说话，它没理人。这不是漏了，是<strong data-page-node-id="a0vgkOoGxUIWqsjShsnsQ3">它在移动时不应该被路边的一句话带走</strong>。第四行则是反过来——移动迎宾恰恰需要听见。</p>
+
+<h2 id="hop-agent" data-page-node-id="HbEgFOWvqttVSqwDnbecZr">装配、预算、推理</h2>
+
+<p data-page-node-id="2Pxqw3wi3R9wZhSVFAUxkY">进入推理之前，要先装配一份工作状态，通常包含四样东西：</p>
+
+<ul data-page-node-id="7hEVAVLqAWyy1i3MkLluaP">
+  <li data-page-node-id="lloJw5TtYrWZjgrrglJgn5"><strong data-page-node-id="JHvFZvLDVQep5V8Lh9FR36">历史消息</strong>——被压缩过的前文，不是原始全量；</li>
+  <li data-page-node-id="0jScnMyZ2zFMRJWjZ9bXjz"><strong data-page-node-id="JZq6nVriGWNaJIfPDbMBdH">业务上下文</strong>——当前正在办的事，以及办到哪一步；</li>
+  <li data-page-node-id="N4214Tkw8viC6XiNmiWv2l"><strong data-page-node-id="lGuUkgJjqAKxkwiSoCzBTy">已确认事实</strong>——「办过」和「办成了」分开存的那两类；</li>
+  <li data-page-node-id="ozX6ZTwXGtOS9kQiM0x3nf"><strong data-page-node-id="K6ZGDDMnENcVV41AVCE11n">当前机器人状态</strong>——它现在能做什么，不能做什么。</li>
+</ul>
+
+<p data-page-node-id="D3fUqnVoFGUlH2XjftUAW4">压缩检查发生在<strong data-page-node-id="tC9yfVxlM9nsbkif1QpgFN">装配时</strong>，不是推理时。这是个有意的位置选择：等到模型报「上下文超了」再压，这一轮已经废了；在装配时按预算压，最坏情况只是这一轮的历史短一点。</p>
+
+<p data-page-node-id="w3Sik8FHrn10RhSvfRPBfD">提示词也在这个阶段拼装——按当前<strong data-page-node-id="jMD1e2LjwCWF9GAy3HtdXD">启用的工具</strong>渲染。所以模型看不见一个没启用的工具，也就不会去调它。</p>
+
+<p data-page-node-id="N8vRao0nMywLn5UKYdw3CM">推理本身是标准的循环：模型 → 工具 → 模型。这里只有两条容易忽略的约束：</p>
+
+<p class="pitfall" data-page-node-id="96ussnALX1a7SzrGMu4jFG"><strong data-page-node-id="WjvXaW6oal8O60aL23vF3A">约束一：</strong>部分工具在同一轮 run 里只允许调用一次，用来阻断「同一个工具反复扇出」和重复副作用。</p>
+<p class="pitfall" data-page-node-id="6YzGspJ3gLBvJZUi1nljjq"><strong data-page-node-id="Cl8puCIjWxZbA5BjyMPusS">约束二：</strong>模型返回空流时只重试一次。重试是兜底，不是常态——反复重试只会让用户等得更久。</p>
+
+<h2 id="hop-tool" data-page-node-id="TcEZLWvuquBykEvu9a0sre">工具期间不许静音</h2>
+
+<p data-page-node-id="RHvWcvBizEM7QGArpxE7g6">工具可能是一次导航、一次检索、一次取号，几秒钟起步。这几秒钟如果什么都不说，用户会认为「它卡住了」。</p>
+
+<p data-page-node-id="xY4Fxidt3HKxubAv5uq3nZ">所以有一条可配置的规则：<strong data-page-node-id="uVy0frYrO8jbywzGzrZXbY">某个工具开始时，播一句固定话术，每轮 run 只播一次</strong>。这句话不是模型生成的，它走的是 Brain Output 的另一个入口——固定话术通道，不经过推理。</p>
+
+<p data-page-node-id="OcllTfHRbUJ5rMIBh8nvfk">于是这一刻字幕和语音会分叉：</p>
+
+<div class="table-scroll" data-page-node-id="TUGBDKBSJj8yPUq2PGhOMl"><table data-page-node-id="PgHD1WncKbkt3fpWfATUA2">
+  <thead data-page-node-id="zxjpVGaTmWlyB9lEhAwH3n"><tr data-page-node-id="N0abNt5Q3Ujw6NH9ZB2dSE"><th data-page-node-id="9z5osnIoWAxsADEtoaFGee"></th><th data-page-node-id="7OBqh1qzR3PZPzXF7fqwgM">字幕</th><th data-page-node-id="Xpmd6Il3cDo6atagep98DL">语音</th></tr></thead>
+  <tbody data-page-node-id="B2otr6yoEYjmATTW9EMmwl">
+    <tr data-page-node-id="WOP00o6N1FCXjwxSZQcpwy"><td data-page-node-id="A6YBgDkX9BgXziVHD03ncs">T9 工具开始</td><td data-page-node-id="nBHfGVyj0HmgR48TRw3cHm">出现工具调用卡片（叫什么、参数是什么）</td><td data-page-node-id="wEd0QvCvALs1YszK8U4FXb">「稍等一下」</td></tr>
+    <tr data-page-node-id="bxLasqx7MhBvaHCxoxXI9S"><td data-page-node-id="CNZI6t9FvrmHc6s1jfhsqC">T10 工具返回</td><td data-page-node-id="5Ao4SPICNa9Gc5yYXQAiqk">卡片变成完成态</td><td data-page-node-id="vFZShq7ycG1fs2mBrzLWAl">模型生成的正式回答</td></tr>
+  </tbody>
+</table></div>
+
+<p data-page-node-id="FENwfm9LzXgxmKOCRXeNAx">这不是「界面和语音不同步」，是两条通道各自干自己该干的事：界面要让人看见它在做什么，语音要让人知道它还在。</p>
+
+<h2 id="hop-output" data-page-node-id="29VsYb2F3oBbsDRRLwUD6s">一路输入，两路输出</h2>
+
+<p data-page-node-id="3fCm2600D1zlZVRPh2CMQC">Brain Output 之后，同一个 chunk 事实被两个订阅者各取一份，走两条完全不同的路：</p>
+
+<div class="table-scroll" data-page-node-id="1k6NSirRfiTgDO1vz6zVAm"><table data-page-node-id="sIBvrxp8wKCjEtRhVNG4Bp">
+  <thead data-page-node-id="eeEjQxlgMRQSvuPOUarhKY"><tr data-page-node-id="WcghZlwHFskyGa0DAYrbYx"><th data-page-node-id="RKqd37Dw25901zHFiTsch1"></th><th data-page-node-id="SNnUlG8xZ7BOAPhkHC1i8H">字幕路</th><th data-page-node-id="WlGIPtvcev2P1ZNA1pIrCS">声音路</th></tr></thead>
+  <tbody data-page-node-id="LrtPDtHZlGtWK3FHCKXntM">
+    <tr data-page-node-id="CqxWrYIo5UzMMX24oqniMa"><td data-page-node-id="cTMY0eoELQW6q5bZzInFvM">处理粒度</td><td data-page-node-id="apTMDnuzPoQHrRQy8W6K05">每个 chunk 立刻投影</td><td data-page-node-id="mZApiBHIkPt6kGbOzvVepN">先进缓冲，攒够再切段</td></tr>
+    <tr data-page-node-id="fVO4idiK8EREKnDqH57dcT"><td data-page-node-id="adzdyV5S82XhdokD9oW8N5">起播条件</td><td data-page-node-id="n9d1oAZZqYYO0Brbjl9jI3">无条件</td><td data-page-node-id="yijlojH7dHlf22JDKxvmef">达到最小字符数，或遇到指定标点</td></tr>
+    <tr data-page-node-id="S9saBlmA61PQThvkfGg6Ek"><td data-page-node-id="u25PhbAADXXiPzKMrmhhFt">为什么这样</td><td data-page-node-id="N1Q2Fn9LVl3nJa08CwaXMH">字幕慢一个字，用户就会觉得卡</td><td data-page-node-id="AgGdnFBrjBzCC8sT62v48C">一个词一个词地合成，语气会碎</td></tr>
+    <tr data-page-node-id="mkNCEwBMkRw43YL2x7ww6B"><td data-page-node-id="OlyIKUU045Dlt5KOa06xkN">被打断时</td><td data-page-node-id="jErUabJI5I2CvQOZjnrkD2">保留已显示内容</td><td data-page-node-id="Uypjn2kCsFi191heh4ydzj">立刻停止，且不再播剩下的缓冲</td></tr>
+  </tbody>
+</table></div>
+
+<p data-page-node-id="v6PHJLcT9X8AqTtA9YjTVq">所以「先看到字、后听到声」是设计结果，不是延迟。反过来，如果字幕比声音<strong data-page-node-id="qd4TSyp3CKkw0qiygWPkhm">慢</strong>，那才是问题。</p>
+
+<h2 id="interrupt" data-page-node-id="B866Vu4oFXJNIf6WmjemNy">三条打断路径</h2>
+
+<p data-page-node-id="1TFIsWR8NTA6rHtDPtkJ47">打断不是一种机制，是三种，触发源完全不同。</p>
+
+<div class="table-scroll" data-page-node-id="BvmXT8gQvezXUWoJ2HL6Ft"><table data-page-node-id="UVqJqTPNPIcPAbeUkoqSnh">
+  <thead data-page-node-id="ybyBz6w73FHfj2bnH2gG4O"><tr data-page-node-id="XLxEzKh6qGtPGgVxXhquC1"><th data-page-node-id="aQPuinDDjkpdxZyraY7AD3">触发</th><th data-page-node-id="PoK9rwspBlkPKMrE0gYMlM">谁发起</th><th data-page-node-id="1KVIDUDFmx6jpEgDDfSJCz">对正在播的声音</th><th data-page-node-id="Y5PTpXZ4iPY9fEldYkbNzu">对正在跑的 run</th></tr></thead>
+  <tbody data-page-node-id="tyFpqe5Iz5K8sDs7MX4Q3X">
+    <tr data-page-node-id="Rka0K6e5ouyEd4f9vLRBEN">
+      <td data-page-node-id="XHi15usHrDspXq01rs5yrh">用户说完一句，输入被接受</td>
+      <td data-page-node-id="1fvPJUhseTRGh7HBNMF1S4">Speech Output Coordinator</td>
+      <td data-page-node-id="foqJkeHb9fK5IWBwyze9nN">立刻打断，并播一声提示音</td>
+      <td data-page-node-id="XcQrkYXga1otqhECGvYKsC">不动</td>
+    </tr>
+    <tr data-page-node-id="MuoJ6n7u3KFgnB8gAWf2Bq">
+      <td data-page-node-id="OAQr8axz2zeA8fGg6dwd7T">新一轮输入到达，而上一轮还没收尾</td>
+      <td data-page-node-id="AHctCnTsDoztJvWAtL8r7L">Run Coordinator</td>
+      <td data-page-node-id="DEMcGNTCFViR5cG8G4DsM6">打断</td>
+      <td data-page-node-id="DT18qqDrV43Ah3krYpMGJ9">旧 run 标记为「已被取代」并取消，新的立刻开始</td>
+    </tr>
+    <tr data-page-node-id="SeC4efIBCXH1Pknh1Zl703">
+      <td data-page-node-id="To1EWSacJJ0EZQhdBvXWBy">run 失败或被取消</td>
+      <td data-page-node-id="2EV7aBGAADy1IlnGDjxGGz">Run Coordinator</td>
+      <td data-page-node-id="02NNjk3VCzlOyZR0muXWZE">打断</td>
+      <td data-page-node-id="8uWhYS7CU6VkT0xeHWnrDp">结束，不再产生输出</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p data-page-node-id="yBXqVLXXgbi4StVZkapAxA">第二种有个例外要单独说：如果上一轮已经在<strong data-page-node-id="HsrR84DFwI1POT0GdlG8pZ">收尾</strong>，新输入不抢占，而是排进待执行队列；控制类输入（不是聊天，而是「停一下」「回迎宾点」这类）永远排在最前面。</p>
+
+<div class="info-box info" data-page-node-id="vk3Dp4P8gAIsZYvQHPz5s2">
+  <span class="ib-icon" data-page-node-id="Y8AkNL23pSRJ6564BB6gQY">🧭</span>
+  <div class="ib-content" data-page-node-id="Ut3ZaaZpNMHnTsjfA49jGB">
+    <p class="ib-title" data-page-node-id="uH24C6UIG370uo0FRCYj0h">这条规则真正的含义</p>
+    <p data-page-node-id="Cv1OiV5NIi3gNlZzo4uaOi">用户说新话的代价，是<strong data-page-node-id="SJ4Fzt4FrFUJe33miBRhzw">上一轮被丢弃</strong>，而不是「排队等它说完」。在服务场景里，人改主意比机器把话说完更重要——所以宁可扔掉半句话，也不让人等。</p>
+  </div>
+</div>
+
+<h2 id="latency" data-page-node-id="5tFUQxXGztgzNWH3Nk83lI">哪些延迟能测，哪些测不到</h2>
+
+<p data-page-node-id="Tp3BYfiMD9ZCndokZg2ADt">这条链上有五个可观测的锚点，覆盖了从「说完」到「听见」的大部分区间。但它们各自只说明一件事，混用会得出错误结论。</p>
+
+<div class="table-scroll" data-page-node-id="ihuViiz2WcDUZF2X1Nrc6c"><table data-page-node-id="E42G4SPa619TFgGWYe4inh">
+  <thead data-page-node-id="1CBUhfwWECqjEICoCHDmtg"><tr data-page-node-id="pzeTjGxuW63xSEhnLZ1Mjh"><th data-page-node-id="VO4ZOR5QiEwKJ1WwWZwKqK">锚点</th><th data-page-node-id="PrW0XTqoTkM4O2dNpFsmgj">覆盖区间</th><th data-page-node-id="zx037GcgsNCGxUHZX4JSA0">它到底说明了什么</th></tr></thead>
+  <tbody data-page-node-id="iApCsBUH6xtEsRBbzVD1RX">
+    <tr data-page-node-id="7RsBx0XBhx2r29joVb5KeS"><td data-page-node-id="4lETV6TUlDcDxdyzsMuxjt">VAD 起止时间</td><td data-page-node-id="1Qo8mHczw0ZGgVLxxCpLmw">用户说话的时长</td><td data-page-node-id="krJFGcIhYQtoCMuKDQ1nov">VAD 检测到的边界，<strong data-page-node-id="DSsceXmYZ9qjrgFQ0xxH89">不是</strong>真实声学首音节</td></tr>
+    <tr data-page-node-id="iI5GBScenmSClHCBVSCW0V"><td data-page-node-id="g8GoOia0ebM52Mvhc3NWf6">ASR 结果时间</td><td data-page-node-id="tztLGjEooFzsAqnOW6JRND">说完 → 出字</td><td data-page-node-id="WQvQFoTE7IU876TfuGBzBH">识别本身花了多久</td></tr>
+    <tr data-page-node-id="Pp5sJc3uwGH1rxfCuz9m8t"><td data-page-node-id="4DDpCDggokGAAFH0F3sOXz">ASR 首字延时</td><td data-page-node-id="fpJwOGHD0VMZQ6jyQibdy5">说话中 → 第一个字</td><td data-page-node-id="V4svsmA1B2otWcknc5ut0n">由 provider 上报，不是所有 provider 都给</td></tr>
+    <tr data-page-node-id="BD8S77xXuFSibRivGwNlTC"><td data-page-node-id="f4uihWiavdfhXDbw2tJats">首段内容进入 TTS</td><td data-page-node-id="xyacj0UsmKHDGfZAKSW9kE">模型首段 → 进入播报链路</td><td data-page-node-id="28sbEJ1OwzL0mM4fgdlVRO">应用层已经把它交出去了</td></tr>
+    <tr data-page-node-id="mFDBOTBHo3c9QPxGThdgpS"><td data-page-node-id="dvhr41AR3KHLM6IkTKyWD6">首段提交成功</td><td data-page-node-id="hn3e1FnuKbvS3OkEtC1qBk">交给 TTS 服务成功</td><td data-page-node-id="q7b27NRTDItMjWu16lFvVb"><strong data-page-node-id="o969ACJl8lZYSgldaY0WeT">只表示请求发出去了</strong>，不表示已经开口</td></tr>
+    <tr data-page-node-id="ZpiPRloSSgo5lLYsgWEuOL"><td data-page-node-id="wJfl3KOjIGZIou5v3MtN7a">播报开始</td><td data-page-node-id="lH9v8S4L9ldSrAMvrtXCwh">真的开始出声</td><td data-page-node-id="9dR2KQQmzahTZJ2Nyt3W7T">这才是用户能听见的起点</td></tr>
+  </tbody>
+</table></div>
+
+<div class="info-box warning" data-page-node-id="HHj384BgzlpnKSPVYCmFWX">
+  <span class="ib-icon" data-page-node-id="Jq4kJKSdIWfjAtOZrLjadZ">⚠️</span>
+  <div class="ib-content" data-page-node-id="JwyTRfxaYEGuHbTzyCt8bq">
+    <p class="ib-title" data-page-node-id="IV1KJ5x0T2HRXomc9uV3aD">最容易搞错的一个指标</p>
+    <p data-page-node-id="vA5ClS3o29xPkZnfVMIPrB">「首段提交成功」经常被当成「用户已经听到」。它其实只证明 transport 调用返回了。<strong data-page-node-id="elFzvyzIoXpQGqOkOhzd1C">用它算端到端延迟，会系统性地少算一段</strong>——而这一段恰恰是 TTS 服务最不稳定的一段。</p>
+  </div>
+</div>
+
+<h2 id="fail" data-page-node-id="rQmX9OBcZ9Mta9p7l20PW6">每一跳挂了会怎样</h2>
+
+<p data-page-node-id="oAtFc41Kl0fFO7z7wYc4lI">这张表是整章最实用的一页：出问题时，先用「用户感知」那一列定位，再去对应的锚点看日志。</p>
+
+<div class="table-scroll" data-page-node-id="vAY5tZL91v9HaIVQhAGPRD"><table data-page-node-id="BinzHtE0dgXaKmRJTeDLvo">
+  <thead data-page-node-id="GuTnY3WnteInJyCICdFk49"><tr data-page-node-id="pSjDbMOXDK30P0HsF6nKQk"><th data-page-node-id="BLHsUFm1wEHDcErBj2Aviz">断在哪</th><th data-page-node-id="K1RAUHrmqfDzNCpJLnYDOc">表现</th><th data-page-node-id="mH9uiLNOb9GaxaUCelmiMM">兜底</th><th data-page-node-id="YP8d4QcBNIF1cknP7DqG0K">用户感受</th></tr></thead>
+  <tbody data-page-node-id="uJaAHj0LMGPeiPvv2PnbFj">
+    <tr data-page-node-id="bJNYThUy3BteBgiEtR2CH8"><td data-page-node-id="InUdEIVYBdXoKAZSTmFwd5">ASR 断线</td><td data-page-node-id="zd0iGm2G9vEWSFKmVzj3Jj">没有字幕，也没有输入</td><td data-page-node-id="YwbDMqfVfD63vfwdwtdALr">transport 重连；会话不受影响</td><td data-page-node-id="SKcMfChxN54Ak0fibLqW0r">「它没反应」</td></tr>
+    <tr data-page-node-id="Z9PWYbud8ZhwjpABx9wMxl"><td data-page-node-id="CUCS6pN6vgkAUkfXoUmGN2">转发矩阵不放行</td><td data-page-node-id="KHHjgVTH7tlV5Wnuhol9fQ">说话没反应</td><td data-page-node-id="rgHiC5mAEdah3Cf0BryoNX">这是设计，不是故障</td><td data-page-node-id="0C5kstCc4ZITMrT8RqFOHU">同上——但换个状态就好了</td></tr>
+    <tr data-page-node-id="7FbUCnQXCQvEaZwunIKgZJ"><td data-page-node-id="BqyDDMWsD7PBwwpbRwwhsN">模型超时 / 空流</td><td data-page-node-id="shNRWUc8BACCL24SKnXP1q">没有输出</td><td data-page-node-id="foxPTJxgmiBHtLBHmLoKTS">重试一次，仍失败则发失败事实</td><td data-page-node-id="MHlV7edOpLOG0lYnw2SrN6">沉默，或一句兜底话术</td></tr>
+    <tr data-page-node-id="Q0E8X7HXekDZO3AZ5AsENj"><td data-page-node-id="GszFNqQTAHkAIknRIFctOJ">TTS 不可用</td><td data-page-node-id="kZbMyYlL6mLQHK7pzg0I6y">有字幕，没声音</td><td data-page-node-id="XEq53AiS3sRFpDvpa7DSol">字幕路继续</td><td data-page-node-id="WahYqA52MBehR52AA8HWd2">能读，不能听</td></tr>
+    <tr data-page-node-id="Ao7Ep58fphddqlpUS2pRL0"><td data-page-node-id="omhewg77lWDLkArdqytcRW">数字人不可用</td><td data-page-node-id="8vG6ADBMqH2SNi5U5vYMs4">有声音，没口型</td><td data-page-node-id="cvWJf0OBokD5GcNcOSfumb">语音路继续</td><td data-page-node-id="ZEBfsRaCsZRUOrVeFjAU5b">能听，不好看</td></tr>
+    <tr data-page-node-id="5DQIgYInJMOCeSjYLfd1UQ"><td data-page-node-id="W9SrfYc5lvx0EXStvQN0WZ">前端连接断</td><td data-page-node-id="6n5DMDO3CqqWFZHXhkNx3g">字幕停在某处</td><td data-page-node-id="4pxgDgMdtlVQCMa8sBfUa9">语音继续；重连后取快照</td><td data-page-node-id="xRk8yvfkxrMwoTgjlpGr63">声音正常，字不动</td></tr>
+  </tbody>
+</table></div>
+
+<p data-page-node-id="qb8jPirRcl2gTwBqOnn4Cp">这张表的每一行都指向同一个判断：<strong data-page-node-id="iOruWNiqFhbPekJypOgCVk">没有任何一跳的失败会让整条链停摆</strong>。这不是巧合，是优先级排出来的结果——在服务现场，「还能说话」比「正确」重要，「有字幕没声音」比「整机黑屏」好。</p>
+
+<p data-page-node-id="Jb7aBEHUmCr48ppLrnVoYE">要按这条链查日志，锚点和查询顺序见 <a href="12-observability.html" data-page-node-id="bGjWTc2OZBTQYM1KWvLnYC">12 可观测性</a>；状态机为什么放行或拦下，见 <a href="08-robot-state.html#forwarding" data-page-node-id="dpAe9cjM1MJnbZyZGuNcuB">08 的转发矩阵</a>。</p>
+
+      </article>
+      <aside class="toc" data-page-node-id="A1N1ESVESLdxBtQZcSnYDa">
+        <div class="toc-inner" data-page-node-id="RqTNofBqJHS5k7FoaoMy5k">
+          <div class="toc-title" data-page-node-id="R4i64969sN5H0cEtgkTA2k">本页目录</div>
+          <ul class="toc-list" id="toc-list" data-page-node-id="SBNWaxZAJQsh0KjmWr2fiS"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer data-page-node-id="BUDfTn2g71OQf3l2LYc471">
+      <span data-page-node-id="OFgME3XxAuElfEhvrDJnUB">个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span data-page-node-id="R1LG0zswRn0b4iclDhM1JP">plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

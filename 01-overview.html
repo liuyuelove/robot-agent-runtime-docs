@@ -228,7 +228,7 @@
   </div>
 </div>
 
-<p>这个环的三个关节分别展开在：<a href="03-adapters.html">03 Adapter 体系</a>（合同与生命周期）、<a href="05-events.html">05 事件驱动</a>（为什么只发事实）、<a href="07-robot-state.html">07 机器人状态机</a>（两张矩阵怎么判）。</p>
+<p>这个环的三个关节分别展开在：<a href="04-adapters.html">04 Adapter 体系</a>（合同与生命周期）、<a href="06-events.html">06 事件驱动</a>（为什么只发事实）、<a href="08-robot-state.html">08 机器人状态机</a>（两张矩阵怎么判）。</p>
 
 <h2 id="two-buses">两条总线，方向相反</h2>
 
@@ -254,7 +254,7 @@
 
 <p>它解决的是一个很实际的问题：<strong>具身系统很难调试</strong>。一句话说完，机器人开始动、屏幕开始变、语音开始播，你没法像调 Web 应用那样在浏览器里打个断点。所以把"当前处于哪个状态、上一句说了什么、调了哪个工具、设备回了什么"全部摊在一屏上，是唯一能用的办法。</p>
 
-<p>注意右侧那栏：设备全部可以手动模拟。这不是玩具——它是让 <a href="12-testing.html">默认测试不依赖真硬件</a> 的前提。</p>
+<p>注意右侧那栏：设备全部可以手动模拟。这不是玩具——它是让 <a href="13-testing.html">默认测试不依赖真硬件</a> 的前提。</p>
 
 <h2 id="ownership">谁持有谁</h2>
 
@@ -280,7 +280,7 @@
 
 <h2 id="no-dispatcher">一个刻意的缺席：没有 Dispatcher</h2>
 
-<p>大多数同类系统里会有一个 <code>ActionDispatcher</code> 或 <code>ToolRouter</code>，把"模型说了要干什么"翻译成具体调用。这个项目<strong>明确禁止</strong>这类组件，并且用一条测试把它钉死（见 <a href="12-testing.html#guards">架构守护测试</a>）。</p>
+<p>大多数同类系统里会有一个 <code>ActionDispatcher</code> 或 <code>ToolRouter</code>，把"模型说了要干什么"翻译成具体调用。这个项目<strong>明确禁止</strong>这类组件，并且用一条测试把它钉死（见 <a href="13-testing.html#guards">架构守护测试</a>）。</p>
 
 <p>理由是它必然退化成一个知道所有模块的总控大函数：新加一个能力要改它，改一个能力要担心影响别人，最后谁都不敢动。替代方案是让 <strong>Tool 自己就是那个翻译层</strong>——它拿着类型化 Input，在执行时按需向 facade 取 Adapter，出错就返回类型化错误。分发这件事被消解进每个 Tool 内部，而不是集中到一处。</p>
 

@@ -23,59 +23,72 @@
             { label: '谁持有谁', href: '01-overview.html#ownership' },
           ]
         },
+        {
+          label: '端到端时序', href: '02-timeline.html', icon: '⏱️',
+          sub: [
+            { label: '九跳全景', href: '02-timeline.html#map' },
+            { label: 'T0–T12 时间轴', href: '02-timeline.html#timeline' },
+            { label: '输入绕状态机', href: '02-timeline.html#hop-input' },
+            { label: '工具期间不静音', href: '02-timeline.html#hop-tool' },
+            { label: '两路输出', href: '02-timeline.html#hop-output' },
+            { label: '三条打断路径', href: '02-timeline.html#interrupt' },
+            { label: '延迟锚点', href: '02-timeline.html#latency' },
+            { label: '每一跳挂了', href: '02-timeline.html#fail' },
+          ]
+        },
       ]
     },
     {
       section: '架构',
       items: [
         {
-          label: '分层与边界', href: '02-architecture.html', icon: '🏗️',
+          label: '分层与边界', href: '03-architecture.html', icon: '🏗️',
           sub: [
-            { label: '九层职责', href: '02-architecture.html#layers' },
-            { label: '依赖方向', href: '02-architecture.html#deps' },
-            { label: '四条硬规则', href: '02-architecture.html#rules' },
+            { label: '九层职责', href: '03-architecture.html#layers' },
+            { label: '依赖方向', href: '03-architecture.html#deps' },
+            { label: '四条硬规则', href: '03-architecture.html#rules' },
           ]
         },
         {
-          label: 'Adapter 体系', href: '03-adapters.html', icon: '🔌',
+          label: 'Adapter 体系', href: '04-adapters.html', icon: '🔌',
           sub: [
-            { label: '三类判定', href: '03-adapters.html#classes' },
-            { label: 'Real / Mock 合同', href: '03-adapters.html#realmock' },
-            { label: '从 0 到 1 写一个', href: '03-adapters.html#build' },
-            { label: '生命周期与 facade', href: '03-adapters.html#runtime' },
-            { label: 'Engine 准入门槛', href: '03-adapters.html#engine' },
+            { label: '三类判定', href: '04-adapters.html#classes' },
+            { label: 'Real / Mock 合同', href: '04-adapters.html#realmock' },
+            { label: '从 0 到 1 写一个', href: '04-adapters.html#build' },
+            { label: '生命周期与 facade', href: '04-adapters.html#runtime' },
+            { label: 'Engine 准入门槛', href: '04-adapters.html#engine' },
           ]
         },
-        { label: 'Tool 体系', href: '04-tools.html', icon: '🧰' },
-        { label: '事件驱动', href: '05-events.html', icon: '📡' },
+        { label: 'Tool 体系', href: '05-tools.html', icon: '🧰' },
+        { label: '事件驱动', href: '06-events.html', icon: '📡' },
       ]
     },
     {
       section: '会话与状态',
       items: [
         {
-          label: '会话生命周期', href: '06-session.html', icon: '👤',
+          label: '会话生命周期', href: '07-session.html', icon: '👤',
           sub: [
-            { label: '单活跃会话', href: '06-session.html#single' },
-            { label: '会话从哪来', href: '06-session.html#sources' },
-            { label: '人脸驱动的切换', href: '06-session.html#face-switch' },
-            { label: '不活跃看门狗', href: '06-session.html#watchdog' },
-            { label: '三类倒计时', href: '06-session.html#kinds' },
-            { label: '六个暂停源', href: '06-session.html#pause-sources' },
-            { label: '会话里存什么', href: '06-session.html#history' },
+            { label: '单活跃会话', href: '07-session.html#single' },
+            { label: '会话从哪来', href: '07-session.html#sources' },
+            { label: '人脸驱动的切换', href: '07-session.html#face-switch' },
+            { label: '不活跃看门狗', href: '07-session.html#watchdog' },
+            { label: '三类倒计时', href: '07-session.html#kinds' },
+            { label: '六个暂停源', href: '07-session.html#pause-sources' },
+            { label: '会话里存什么', href: '07-session.html#history' },
           ]
         },
         {
-          label: '机器人状态机', href: '07-robot-state.html', icon: '🤖',
+          label: '机器人状态机', href: '08-robot-state.html', icon: '🤖',
           sub: [
-            { label: '15 个状态', href: '07-robot-state.html#states' },
-            { label: '转移矩阵', href: '07-robot-state.html#transition' },
-            { label: '事件转发矩阵', href: '07-robot-state.html#forwarding' },
-            { label: '能力准入', href: '07-robot-state.html#capability' },
-            { label: '转移触发源', href: '07-robot-state.html#triggers' },
-            { label: 'reaction', href: '07-robot-state.html#reaction' },
-            { label: '回充链路', href: '07-robot-state.html#charging' },
-            { label: '急停与启动对账', href: '07-robot-state.html#emergency' },
+            { label: '15 个状态', href: '08-robot-state.html#states' },
+            { label: '转移矩阵', href: '08-robot-state.html#transition' },
+            { label: '事件转发矩阵', href: '08-robot-state.html#forwarding' },
+            { label: '能力准入', href: '08-robot-state.html#capability' },
+            { label: '转移触发源', href: '08-robot-state.html#triggers' },
+            { label: 'reaction', href: '08-robot-state.html#reaction' },
+            { label: '回充链路', href: '08-robot-state.html#charging' },
+            { label: '急停与启动对账', href: '08-robot-state.html#emergency' },
           ]
         },
       ]
@@ -84,23 +97,23 @@
       section: '上下文',
       items: [
         {
-          label: '上下文压缩', href: '08-compression.html', icon: '🗜️',
+          label: '上下文压缩', href: '09-compression.html', icon: '🗜️',
           sub: [
-            { label: '预算模型', href: '08-compression.html#budget' },
-            { label: '有界批次', href: '08-compression.html#batch' },
-            { label: 'CAS 提交', href: '08-compression.html#cas' },
-            { label: '两类事实', href: '08-compression.html#facts' },
+            { label: '预算模型', href: '09-compression.html#budget' },
+            { label: '有界批次', href: '09-compression.html#batch' },
+            { label: 'CAS 提交', href: '09-compression.html#cas' },
+            { label: '两类事实', href: '09-compression.html#facts' },
           ]
         },
         {
-          label: '提示词工程', href: '09-prompt.html', icon: '📝',
+          label: '提示词工程', href: '10-prompt.html', icon: '📝',
           sub: [
-            { label: 'prompt 是代码', href: '09-prompt.html#why' },
-            { label: '一个版本长什么样', href: '09-prompt.html#shape' },
-            { label: '按工具拼装', href: '09-prompt.html#assembly' },
-            { label: '七个版本共存', href: '09-prompt.html#registry' },
-            { label: '两套版本策略', href: '09-prompt.html#policies' },
-            { label: '改完怎么验证', href: '09-prompt.html#verify' },
+            { label: 'prompt 是代码', href: '10-prompt.html#why' },
+            { label: '一个版本长什么样', href: '10-prompt.html#shape' },
+            { label: '按工具拼装', href: '10-prompt.html#assembly' },
+            { label: '七个版本共存', href: '10-prompt.html#registry' },
+            { label: '两套版本策略', href: '10-prompt.html#policies' },
+            { label: '改完怎么验证', href: '10-prompt.html#verify' },
           ]
         },
       ]
@@ -108,23 +121,23 @@
     {
       section: '运行时',
       items: [
-        { label: '配置体系', href: '10-config.html', icon: '⚙️' },
-        { label: '可观测性', href: '11-observability.html', icon: '📈' },
+        { label: '配置体系', href: '11-config.html', icon: '⚙️' },
+        { label: '可观测性', href: '12-observability.html', icon: '📈' },
       ]
     },
     {
       section: '工程',
       items: [
-        { label: '测试策略', href: '12-testing.html', icon: '🧪' },
-        { label: 'AI 协作开发', href: '13-ai-workflow.html', icon: '🤝' },
+        { label: '测试策略', href: '13-testing.html', icon: '🧪' },
+        { label: 'AI 协作开发', href: '14-ai-workflow.html', icon: '🤝' },
         {
-          label: '复盘与取舍', href: '14-retrospective.html', icon: '🪞',
+          label: '复盘与取舍', href: '15-retrospective.html', icon: '🪞',
           sub: [
-            { label: '从原型到重写', href: '14-retrospective.html#rewrite' },
-            { label: '做对的', href: '14-retrospective.html#right' },
-            { label: '代价与过度设计', href: '14-retrospective.html#wrong' },
-            { label: '两个案例', href: '14-retrospective.html#cases' },
-            { label: '如果重来', href: '14-retrospective.html#again' },
+            { label: '从原型到重写', href: '15-retrospective.html#rewrite' },
+            { label: '做对的', href: '15-retrospective.html#right' },
+            { label: '代价与过度设计', href: '15-retrospective.html#wrong' },
+            { label: '两个案例', href: '15-retrospective.html#cases' },
+            { label: '如果重来', href: '15-retrospective.html#again' },
           ]
         },
       ]

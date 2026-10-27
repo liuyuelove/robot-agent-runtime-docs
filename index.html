@@ -152,62 +152,67 @@
     <div class="card-title">系统全景</div>
     <div class="card-desc">一次完整交互要经过哪几个边界，谁持有谁，进程里到底跑着什么。</div>
   </a>
-  <a class="card" href="02-architecture.html">
+  <a class="card" href="02-timeline.html">
+    <div class="card-icon">⏱️</div>
+    <div class="card-title">端到端时序</div>
+    <div class="card-desc">从声波到播报的九跳，T0–T12 时间轴，三条打断路径与延迟锚点。</div>
+  </a>
+  <a class="card" href="03-architecture.html">
     <div class="card-icon">🏗️</div>
     <div class="card-title">分层与边界</div>
     <div class="card-desc">九层职责、依赖方向，以及"为什么系统里不允许出现 Dispatcher"。</div>
   </a>
-  <a class="card" href="03-adapters.html">
+  <a class="card" href="04-adapters.html">
     <div class="card-icon">🔌</div>
     <div class="card-title">Adapter 体系</div>
     <div class="card-desc">三类判定、Real/Mock 合同一致、Runtime 生命周期与 facade 唯一入口。</div>
   </a>
-  <a class="card" href="04-tools.html">
+  <a class="card" href="05-tools.html">
     <div class="card-icon">🧰</div>
     <div class="card-title">Tool 体系</div>
     <div class="card-desc">代码注册作为唯一事实源，Schema 与入口自动推导，YAML 只管开关。</div>
   </a>
-  <a class="card" href="05-events.html">
+  <a class="card" href="06-events.html">
     <div class="card-icon">📡</div>
     <div class="card-title">事件驱动</div>
     <div class="card-desc">事实总线与命令总线的分野，以及为什么它不承诺顺序和幂等。</div>
   </a>
-  <a class="card" href="06-session.html">
+  <a class="card" href="07-session.html">
     <div class="card-icon">👤</div>
     <div class="card-title">会话生命周期</div>
     <div class="card-desc">单活跃会话模型、人脸驱动的会话切换，以及三类倒计时与六个暂停源。</div>
   </a>
-  <a class="card" href="07-robot-state.html">
+  <a class="card" href="08-robot-state.html">
     <div class="card-icon">🤖</div>
     <div class="card-title">机器人状态机</div>
     <div class="card-desc">15 个状态、两张矩阵：什么能转过去，什么状态下能听见什么。</div>
   </a>
-  <a class="card" href="08-compression.html">
+  <a class="card" href="09-compression.html">
     <div class="card-icon">🗜️</div>
     <div class="card-title">上下文压缩</div>
     <div class="card-desc">预算模型、CAS 提交，以及"办过"和"办成了"为什么必须分开存。</div>
   </a>
-  <a class="card" href="09-prompt.html">
+  <a class="card" href="10-prompt.html">
     <div class="card-icon">📝</div>
     <div class="card-title">提示词工程</div>
     <div class="card-desc">prompt 是代码：按启用的工具拼装，模型看不到一个没启用的工具。</div>
   </a>
-  <a class="card" href="10-config.html">
+  <a class="card" href="11-config.html">
     <div class="card-icon">⚙️</div>
     <div class="card-title">配置体系</div>
     <div class="card-desc">三级合并、启动时一次性构造类型化 Config，运行期不可变。</div>
   </a>
-  <a class="card" href="11-observability.html">
+  <a class="card" href="12-observability.html">
     <div class="card-icon">🔍</div>
     <div class="card-title">可观测性</div>
     <div class="card-desc">结构化日志、事件流与快照，出问题时从哪一层开始查。</div>
   </a>
-  <a class="card" href="12-testing.html">
+  <a class="card" href="13-testing.html">
     <div class="card-icon">🧪</div>
     <div class="card-title">测试策略</div>
     <div class="card-desc">21 个架构守护测试：把"不许这么写"变成会红的 CI。</div>
   </a>
-  <a class="card" href="13-ai-workflow.html">
+  <a class="card" href="14-ai-workflow.html">
     <div class="card-icon">🤝</div>
     <div class="card-title">AI 协作开发</div>
     <div class="card-desc">用一份准则目录约束人和 AI，让 7.8 万行代码不散架。</div>
@@ -219,11 +224,12 @@
   <div class="ib-content">
     <p class="ib-title">阅读建议</p>
     <p>看不懂某个词 → 先查 <a href="00-glossary.html">术语表</a>；
-    关心架构判断 → 读 <a href="02-architecture.html">02</a> 和 <a href="03-adapters.html">03</a>；
-    关心"一次对话什么时候结束" → 读 <a href="06-session.html#watchdog">06 的看门狗一节</a>；
-    关心"机器人在什么状态下会做什么" → 直接读 <a href="07-robot-state.html">07</a>；
-    关心"AI 怎么参与工程" → 读 <a href="12-testing.html">12</a> 和 <a href="13-ai-workflow.html">13</a>；
-    只想看结论 → 跳到 <a href="14-retrospective.html">复盘</a>。</p>
+    想知道一次对话按什么顺序发生 → 读 <a href="02-timeline.html">02 时序</a>；
+    关心架构判断 → 读 <a href="03-architecture.html">03</a> 和 <a href="04-adapters.html">04</a>；
+    关心"一次对话什么时候结束" → 读 <a href="07-session.html#watchdog">07 的看门狗一节</a>；
+    关心"机器人在什么状态下会做什么" → 直接读 <a href="08-robot-state.html">08</a>；
+    关心"AI 怎么参与工程" → 读 <a href="13-testing.html">13</a> 和 <a href="14-ai-workflow.html">14</a>；
+    只想看结论 → 跳到 <a href="15-retrospective.html">复盘</a>。</p>
   </div>
 </div>
 
