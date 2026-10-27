@@ -1,237 +1,243 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-page-node-id="rXqEqfAOc3yzXO4OgF9TeI">
-<head data-page-node-id="ygmEQRGVgc3jkMirAGu8Iv">
-<meta charset="UTF-8" data-page-node-id="VAjdeqFQQh9I948UECjgF5">
-<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="0GW3VOWz1j1HlYJTQsXfnq">
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>项目概述 · 服务机器人 Agent 运行时笔记</title>
-<meta name="description" content="服务机器人 Agent 运行时的架构笔记：Adapter 治理、工具注册、事件事实总线与架构守护测试。" data-page-node-id="dZoSv9opVB7QHtIWjvIbQM">
-<link rel="stylesheet" href="assets/style.css" data-page-node-id="4iWNQVZxC9NOPzxd58Jvkf">
+<meta name="description" content="服务机器人 Agent 运行时的架构笔记：Adapter 治理、工具注册、事件事实总线与架构守护测试。">
+<link rel="stylesheet" href="assets/style.css">
 </head>
-<body data-page-node-id="ojKJUwF3mCEbHaY5P4BNoO">
-<div class="layout" data-page-node-id="8NMLI9Q6gLjByJLHQlLME6">
-  <aside class="sidebar" id="sidebar" data-page-node-id="HGkf72pmaEIRFczU07LFJb">
-    <div class="sidebar-header" data-page-node-id="RxrAkHjk6oEU0hCjnojTfn">
-      <a class="sidebar-logo" href="index.html" data-page-node-id="vx8clZJEwDK40qWmg6Qsl7">
-        <span class="logo-icon" data-page-node-id="A1hKprkVCWwiALePrbwyyM">◈</span>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
         Agent Runtime Notes
       </a>
-      <div class="sidebar-subtitle" data-page-node-id="6hYnNf42qiroDUA3CUW0K7">服务机器人 · 具身智能体运行时</div>
-      <span class="sidebar-version" data-page-node-id="6AGQRFPX29Jkcff45AXRFi">v0.1 · 骨架稿</span>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
     </div>
-    <ul class="sidebar-nav" id="sidebar-nav" data-page-node-id="5dJoqCuequr1Fe9RBC1yDT"></ul>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
   </aside>
-  <div class="sidebar-overlay" id="sidebar-overlay" data-page-node-id="Q6ZKATQDimobQ6PKA8YLIh"></div>
-  <div class="main" data-page-node-id="YbYHBMSef8zkCR09Ifd4ya">
-    <header class="topbar" data-page-node-id="enp05FeemidfFo3UAHfAbe">
-      <button class="topbar-mobile-btn" id="sidebar-toggle" data-page-node-id="ZK5tpvws3BNq2uEGsqRaDn">☰</button>
-      <nav class="breadcrumb" data-page-node-id="4fjCmkTw114CT3WO5qd4Lk">
-        <a href="index.html" data-page-node-id="5WuDXdRyvXMvQFSHrsWHs7">笔记</a>
-        <span class="breadcrumb-sep" data-page-node-id="MLfintN4QukalJJKQc1EIN">/</span>
-        <span class="breadcrumb-current" data-page-node-id="1CSA641v5qS6AjCHSxgCRB">项目概述</span>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">项目概述</span>
       </nav>
-      <div class="topbar-links" data-page-node-id="wr9dGxFSRTalVktKXMZzF7">
-        <a class="topbar-link" href="index.html" data-page-node-id="lFZslT39rDLG0jMzJPHrUc">目录</a>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
       </div>
     </header>
-    <div class="content-wrapper" data-page-node-id="pR5jtlZEvsg41kmX4tB5B1">
-      <article class="article" data-page-node-id="J7WNglB9LJvRN2sCwzRqp7">
+    <div class="content-wrapper">
+      <article class="article">
 
-<div class="hero" data-page-node-id="8g8whn8Du8MHC46QqNKSxn">
-  <div class="hero-inner" data-page-node-id="TIsgkVFOOBBR1kHdsFN79w">
-    <h1 data-page-node-id="h4VgskOy4TElsYmhx1Akz0">服务机器人<br data-page-node-id="0tlaiHVZXQa3RbNJkC4oFr">Agent 运行时</h1>
-    <p class="lead" data-page-node-id="5DbyaVGs5LanNHiXcsy6Su">
+<div class="hero">
+  <div class="hero-inner">
+    <h1>服务机器人<br>Agent 运行时</h1>
+    <p class="lead">
       一台运行在线下服务场景里的机器人：轮式底盘、业务屏、数字人、环形麦阵。
       一个 LLM Agent 站在中间，决定"现在该说什么、该调哪个能力、该把机器带到哪"。
       这里记录的是它的骨架，以及为了撑住这套骨架做出的取舍。
     </p>
-    <div class="hero-badges" data-page-node-id="3aXEDBH10F40UdP2gd2Kxn">
-      <div class="hero-stat" data-page-node-id="NGGDUZBiCfsWTOznf3DqIF"><span class="hero-stat-num" data-page-node-id="GBRdZ0NZSEIlrv73aJMRbN">7.8万</span><span class="hero-stat-label" data-page-node-id="8k9dAUT8WxaTEDHQBPXCcS">行生产代码</span></div>
-      <div class="hero-stat" data-page-node-id="aUVWXpGtVEYzhqAY2oXo5C"><span class="hero-stat-num" data-page-node-id="zDZ83Pts0UlAyePZVHjoDY">6.4万</span><span class="hero-stat-label" data-page-node-id="qwQkfn75Q1T7syUUJfLbFr">行测试代码</span></div>
-      <div class="hero-stat" data-page-node-id="AOGHPQvO742XIc3t4wZOhW"><span class="hero-stat-num" data-page-node-id="C1PP4AoYOwptCCTr8IgSPj">27</span><span class="hero-stat-label" data-page-node-id="HMqjBqSTe3pE3EiWaeSEfT">Public Adapter</span></div>
-      <div class="hero-stat" data-page-node-id="fOMnSr1WccGYan0YttSwoG"><span class="hero-stat-num" data-page-node-id="X02BvAwQO42rlEzeBv5hJ1">21</span><span class="hero-stat-label" data-page-node-id="ao4GqjwZVhSfb5qJmf5nO2">架构守护测试</span></div>
+    <div class="hero-badges">
+      <div class="hero-stat"><span class="hero-stat-num">7.8万</span><span class="hero-stat-label">行生产代码</span></div>
+      <div class="hero-stat"><span class="hero-stat-num">6.4万</span><span class="hero-stat-label">行测试代码</span></div>
+      <div class="hero-stat"><span class="hero-stat-num">27</span><span class="hero-stat-label">Public Adapter</span></div>
+      <div class="hero-stat"><span class="hero-stat-num">21</span><span class="hero-stat-label">架构守护测试</span></div>
     </div>
   </div>
 </div>
 
-<div class="info-box warning" data-page-node-id="NThPMcihtHVo3HqaT5DWqw">
-  <span class="ib-icon" data-page-node-id="DWmhbUwxHZ3NhgLNNrTNpe">⚠️</span>
-  <div class="ib-content" data-page-node-id="3IG3vSrDfGrNYvVieIzMze">
-    <p class="ib-title" data-page-node-id="Vpyg4YyJCSvTxeucFlXlPO">关于这份笔记</p>
-    <p data-page-node-id="xDCcxv1CE2UpDFr69hJXf7">这是个人技术总结，不是任何公司的产品文档。所有源码、配置、内网地址、设备型号、业务话术与客户数据均已剔除或抽象为占位符。
-    文中出现的 <code data-page-node-id="UETMWsFob96sWfJavOFj8R">&lt;llm-gateway&gt;</code>、<code data-page-node-id="op91X3NaPACrJIeDqTcKH0">192.0.2.10</code>（RFC 5737 文档保留地址）、<code data-page-node-id="vTkST2W3sQEzfoeNdYh9VT">某厂商底盘</code> 等，全部是占位符，不代表真实取值。</p>
+<div class="info-box warning">
+  <span class="ib-icon">⚠️</span>
+  <div class="ib-content">
+    <p class="ib-title">关于这份笔记</p>
+    <p>这是个人技术总结，不是任何公司的产品文档。所有源码、配置、内网地址、设备型号、业务话术与客户数据均已剔除或抽象为占位符。
+    文中出现的 <code>&lt;llm-gateway&gt;</code>、<code>192.0.2.10</code>（RFC 5737 文档保留地址）、<code>某厂商底盘</code> 等，全部是占位符，不代表真实取值。</p>
   </div>
 </div>
 
-<h2 id="what" data-page-node-id="xucQZFbcvYfrQSM5pDhOR2">这是什么</h2>
+<h2 id="what">这是什么</h2>
 
-<p data-page-node-id="UqA0u1daEXrM1AFu3bKeug">一套部署在单台边缘机器上的具身智能体运行时。它要同时应付三类输入：</p>
+<p>一套部署在单台边缘机器上的具身智能体运行时。它要同时应付三类输入：</p>
 
-<ul data-page-node-id="5o8A96QW4ZB6WORAZhRKRR">
-  <li data-page-node-id="SlXFZSGie3aBRW0CiVAQdh"><strong data-page-node-id="21X1ETUFzaMSoBdZUvyyMl">人</strong>——走近、被唤醒、说话、被记住长相；</li>
-  <li data-page-node-id="3oq5i7BchGvQ2yvSDyKvwe"><strong data-page-node-id="cnQeNIdJA6frbZ6meLVedX">设备</strong>——底盘位置、电量、业务屏状态、取号结果、充电桩握手；</li>
-  <li data-page-node-id="sFy1DcPg81aLDpQVKxXsef"><strong data-page-node-id="gqD5j8qhTYcDMoaq9LMKzm">模型</strong>——一个会调工具、会跑偏、会说错话的 LLM。</li>
+<ul>
+  <li><strong>人</strong>——走近、被唤醒、说话、被记住长相；</li>
+  <li><strong>设备</strong>——底盘位置、电量、业务屏状态、取号结果、充电桩握手；</li>
+  <li><strong>模型</strong>——一个会调工具、会跑偏、会说错话的 LLM。</li>
 </ul>
 
-<p data-page-node-id="AN6o3qiWQ0JKhEUjcXe7vj">然后把它们收敛成一条可预期的主线：<em data-page-node-id="IltyAvQF9jejCTmJ5Zn74R">迎宾 → 对话 → 办业务 → 送别 → 回位 / 巡检 / 回充</em>。</p>
+<p>然后把它们收敛成一条可预期的主线：<em>迎宾 → 对话 → 办业务 → 送别 → 回位 / 巡检 / 回充</em>。</p>
 
-<p data-page-node-id="rbVFSjnohk1zu4qbhPPtDU">真正难的地方不在"接一个大模型"，而在于：<strong data-page-node-id="6YAVGHu8GSkwG7C9gioBX9">27 个外部设备与服务、18 个可被模型调用的能力、5 个机器人状态、十余条互相竞争的计时器</strong>，要在一个没有运维介入的单机进程里长期稳定地跑。</p>
+<p>真正难的地方不在"接一个大模型"，而在于：<strong>27 个外部设备与服务、18 个可被模型调用的能力、15 个机器人状态、十余条互相竞争的计时器</strong>，要在一个没有运维介入的单机进程里长期稳定地跑。</p>
 
-<h2 id="problems" data-page-node-id="AeO2DM0knlHHc00Le3f4ak">三个绕不开的工程难题</h2>
+<h2 id="problems">三个绕不开的工程难题</h2>
 
-<div class="table-scroll" data-page-node-id="UkqbGI1mAPpVe8ACyDREs3"><table data-page-node-id="qnITZpn79r1kmmG7BqvZbO">
-  <thead data-page-node-id="dDt6nbNInDrbrcQb93JJX2"><tr data-page-node-id="BKNvnESeR6stpcXpBgs3Cx"><th data-page-node-id="of08xWDdea51ZafBVgcOAC">难题</th><th data-page-node-id="ae5TB1l3CWPSHAkOy5rR7d">具体表现</th><th data-page-node-id="hoOZJavIYRfz3XpubCqI15">采用的解法</th></tr></thead>
-  <tbody data-page-node-id="GFgGPhtTl4RB3LUB5BMRtE">
-    <tr data-page-node-id="7b5B9nA0nPavwpfoRDsbwp">
-      <td data-page-node-id="WBQWZ9EKOcJUPUe40PO2gP"><strong data-page-node-id="2CWBnQkTZhvHxHyLC191BL">长尾设备接入</strong></td>
-      <td data-page-node-id="yMcdgpXqPwGGLo7uvmVZBv">底盘、业务屏、自助设备、环形麦、数字人、充电桩、门禁……每个厂商一套协议；换一个型号就要改一片代码</td>
-      <td data-page-node-id="9uLOPg1f8m4YHdRmEgNen2">Adapter 三分类 + Real/Mock 合同一致 + 统一生命周期；上层只认语义方法，不认协议</td>
+<div class="table-scroll"><table>
+  <thead><tr><th>难题</th><th>具体表现</th><th>采用的解法</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>长尾设备接入</strong></td>
+      <td>底盘、业务屏、自助设备、环形麦、数字人、充电桩、门禁……每个厂商一套协议；换一个型号就要改一片代码</td>
+      <td>Adapter 三分类 + Real/Mock 合同一致 + 统一生命周期；上层只认语义方法，不认协议</td>
     </tr>
-    <tr data-page-node-id="bv5zaSpV8GAtxxJnAy9kiJ">
-      <td data-page-node-id="QMkM7fhDydgZTpKC298fNP"><strong data-page-node-id="YXv4dpiUJDiQ8pJYrTvusM">模型行为不确定</strong></td>
-      <td data-page-node-id="qOuux4MFPH48bDwOTLCm0i">同一个问题两次调用工具不同；该说"好的"的时候开始编业务规则；设备还在动就宣布"已到达"</td>
-      <td data-page-node-id="WxILYuIrmVSEqrx2wcE6XU">Tool 合同约束输出；状态机约束动作；<strong data-page-node-id="1P92hcwMFM7lOnnfX3nFxS">设备事实事件</strong>约束"已发生"的判定权</td>
+    <tr>
+      <td><strong>模型行为不确定</strong></td>
+      <td>同一个问题两次调用工具不同；该说"好的"的时候开始编业务规则；设备还在动就宣布"已到达"</td>
+      <td>Tool 合同约束输出；状态机约束动作；<strong>设备事实事件</strong>约束"已发生"的判定权</td>
     </tr>
-    <tr data-page-node-id="bmPxdNDOFjbIAMasknX2vN">
-      <td data-page-node-id="Dp5HK6bJ5qOzLnAqR1XmeZ"><strong data-page-node-id="E8vxEpHQwijzLUpbHf2kf9">多人 + AI 协作</strong></td>
-      <td data-page-node-id="reaTVipApEsELEKbDAM4Q1">12 个人、897 次提交、大量 AI 生成代码；风格、边界、命名三天就漂移</td>
-      <td data-page-node-id="uxKRGBTOZgbmi0Hy4odaHw">单一准则目录 + 模块双文档（README/AGENTS）+ <strong data-page-node-id="zDGqRBgYMEHxuRUQcN1TLN">21 个架构守护测试</strong>把规则变成 CI</td>
+    <tr>
+      <td><strong>多人 + AI 协作</strong></td>
+      <td>12 个人、897 次提交、大量 AI 生成代码；风格、边界、命名三天就漂移</td>
+      <td>单一准则目录 + 模块双文档（README/AGENTS）+ <strong>21 个架构守护测试</strong>把规则变成 CI</td>
     </tr>
   </tbody>
 </table></div>
 
-<h2 id="stack" data-page-node-id="m3RA65a8CY2s1LvhgtTQCk">技术栈</h2>
+<h2 id="stack">技术栈</h2>
 
-<div class="table-scroll" data-page-node-id="tNikY4mtDDSUd0Wjx245Ly"><table data-page-node-id="22yXPKWRdPajeIYUz3C4pe">
-  <thead data-page-node-id="DcvgxU0Txk7BVPPubUNZYb"><tr data-page-node-id="9PV7dmoYi4SQYZz7zJ6qho"><th data-page-node-id="1uxgvwe8HDibTllHK2vecs">层</th><th data-page-node-id="19fCRa1bezkGeLdym5A4Es">选型</th><th data-page-node-id="wv6jl3m20XH4AVEqFrBFcb">说明</th></tr></thead>
-  <tbody data-page-node-id="RZYWcjpTh4QZ8a5Iq2IZ3S">
-    <tr data-page-node-id="1YyliXGi1OuGY38Lxl0aDN"><td data-page-node-id="WcvPwP85wIsJhj0qix3cAP">语言</td><td data-page-node-id="aCEK9uxCRXa8SnzGANuOt5">Python 3.11+</td><td data-page-node-id="9rtOtLDrM1DN3FWKPeD5m6">类型注解 + Pydantic v2</td></tr>
-    <tr data-page-node-id="Uzsb0RREGofLPYh3adEQEM"><td data-page-node-id="pbUjnsX6HDH2vIRHl2d54p">Agent</td><td data-page-node-id="hVyo54o25AOaeEhx4V8Vr4">LangGraph / LangChain</td><td data-page-node-id="lhS3GpSvYlcDLHZjBRiYCA">单 agent + 工具调用，不用多 agent 编排</td></tr>
-    <tr data-page-node-id="skUFDDhhVREdYU5XG1YhTq"><td data-page-node-id="GCAKTQyqW2Z1nQ0KBtk5Xc">服务</td><td data-page-node-id="3IJvoUQiuhYrTxsqeLwKvC">FastAPI + Uvicorn</td><td data-page-node-id="zM2bfPjk0JFR0LNFwH5eHo">HTTP + SSE + WebSocket，进程内多路并发</td></tr>
-    <tr data-page-node-id="MupXryBI4CO5Dc6O4BOAKE"><td data-page-node-id="YZN3aVF2TMAyUh88Rp1t9h">配置</td><td data-page-node-id="MKS8vLV1J6QJ7LOq4hTORf">YAML + env</td><td data-page-node-id="NRstkPgXa8opivIaFCdTLJ">三级合并，启动期构造为不可变类型化对象</td></tr>
-    <tr data-page-node-id="vRq6EDnXJYJNtSWX47tnMt"><td data-page-node-id="kfDxUne0LGBwU8yDVgMiyu">观测</td><td data-page-node-id="gomD1M5LmoKWpTpxFEWMJv">自研 JSONL schema</td><td data-page-node-id="DdHAA36BJ43ltB71IbeRjj">单行结构化日志 + 按 Run 聚合的耗时分析脚本</td></tr>
-    <tr data-page-node-id="N8wpiysbm9vNxtkG6Frqjk"><td data-page-node-id="00PDHbKfovr0goa5ciHuAw">测试</td><td data-page-node-id="ZOFoA1BCND1H5yj7uEpmjX">pytest / pytest-asyncio</td><td data-page-node-id="mb0CvjVsWrVPeuHQEftble">默认用例不依赖真实 LLM、网络或硬件</td></tr>
-    <tr data-page-node-id="7Q7SXMSzn3SuTKALhQP2dG"><td data-page-node-id="2Z0wquHwrLxoJ1E2SamhRv">部署</td><td data-page-node-id="w61arXCmSBGXBXhNOArgBG">单机进程</td><td data-page-node-id="eeaaIJUKpCpHI7GFxUdLb7">边缘侧，无容器、无外网依赖；这也是很多设计的约束来源</td></tr>
+<div class="table-scroll"><table>
+  <thead><tr><th>层</th><th>选型</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>语言</td><td>Python 3.11+</td><td>类型注解 + Pydantic v2</td></tr>
+    <tr><td>Agent</td><td>LangGraph / LangChain</td><td>单 agent + 工具调用，不用多 agent 编排</td></tr>
+    <tr><td>服务</td><td>FastAPI + Uvicorn</td><td>HTTP + SSE + WebSocket，进程内多路并发</td></tr>
+    <tr><td>配置</td><td>YAML + env</td><td>三级合并，启动期构造为不可变类型化对象</td></tr>
+    <tr><td>观测</td><td>自研 JSONL schema</td><td>单行结构化日志 + 按 Run 聚合的耗时分析脚本</td></tr>
+    <tr><td>测试</td><td>pytest / pytest-asyncio</td><td>默认用例不依赖真实 LLM、网络或硬件</td></tr>
+    <tr><td>部署</td><td>单机进程</td><td>边缘侧，无容器、无外网依赖；这也是很多设计的约束来源</td></tr>
   </tbody>
 </table></div>
 
-<h2 id="role" data-page-node-id="u58pwGeX38p8MyksCIk3HC">我的角色</h2>
+<h2 id="role">我的角色</h2>
 
-<div class="info-box info" data-page-node-id="wAUE26Emt4oITxLEyiwviK">
-  <span class="ib-icon" data-page-node-id="T9phixJNH9faz7N9iG3zHv">👤</span>
-  <div class="ib-content" data-page-node-id="UqgAn9QNfuVKAe0PyGex70">
-    <p class="ib-title" data-page-node-id="SoeoVlNI4Xwrky2PADM7PV">这是团队项目，不是个人作品</p>
-    <p data-page-node-id="mYSsHxOkGhpX4D233FCuCI">系统由 12 人团队在约 2.5 个月内共建（897 次提交）。这份笔记记录的是<strong data-page-node-id="emDZDMZbBdkr8eLeZakwdY">整个系统的设计</strong>；我个人负责的部分单列在下方，不夸大范围。</p>
+<div class="info-box info">
+  <span class="ib-icon">👤</span>
+  <div class="ib-content">
+    <p class="ib-title">这是团队项目，不是个人作品</p>
+    <p>系统由 12 人团队在约 2.5 个月内共建（897 次提交）。这份笔记记录的是<strong>整个系统的设计</strong>；我个人负责的部分单列在下方，不夸大范围。</p>
   </div>
 </div>
 
-<div class="table-scroll" data-page-node-id="jxC7jijV6eoGqWdNy6nvTe"><table data-page-node-id="O7VphTqe26dM0uPXJHkfuF">
-  <thead data-page-node-id="mxCzKfamC2CQxup7RQ3XAA"><tr data-page-node-id="LFhJeRfoctB90BmR7utMuE"><th data-page-node-id="wTwVbElk7FzKhW7tIfxqDV">项</th><th data-page-node-id="74eOHrSyNjxupsvceFtDCL">内容</th></tr></thead>
-  <tbody data-page-node-id="e6gkzjWsnOscoYbTMUQ50R">
-    <tr data-page-node-id="H58oUd3ghlh8dHGLaL6AGA"><td data-page-node-id="st6sHCnefGepATNnJc4WAX">团队</td><td data-page-node-id="49KqJlx3GzZhBQUAgKW3c9">12 人 · 约 2.5 个月 · 897 次提交</td></tr>
-    <tr data-page-node-id="3mbpt2sOGkCGDN0AXHHuzo"><td data-page-node-id="7n2hgOOR2wrhFs3hYUxCEI">我的角色</td><td data-page-node-id="8c3VlMBfPLNTM3DOqdYVD8">实习工程师（2026.06 – 2026.09，约 3.5 个月）</td></tr>
-    <tr data-page-node-id="m2f7pXkLee3PO5ggfeUbon"><td data-page-node-id="Qvp1uFS9CFjGCkwJi5W8pr">我主导的模块</td><td data-page-node-id="cvUE1hlfgRlz1Ei4EaKAHf">数字人 Integration Adapter（0→1）、定时移动迎宾、迎宾点归位判定、巡检结果链路、工具路由测评体系</td></tr>
-    <tr data-page-node-id="ApiHQcW2IcdHW5gKL7Ob8A"><td data-page-node-id="Mrz5CJZ4E0roIe3YcqCrRU">我参与的部分</td><td data-page-node-id="pAlKWyPc7FREeVYZxLqV2H">迎宾与状态机联调、ASR / TTS 生命周期、不活跃看门狗、下屏链路、充电状态显示、附近地点搜索</td></tr>
-    <tr data-page-node-id="Q5i47L2m4jzaAM1HIRfsjG"><td data-page-node-id="vVaveRCJsVUEBoSR9YQXSu">可验证产出</td><td data-page-node-id="fO5HH1U3yLhiICDfrzCvbN">运行时主仓 52 次非 merge 提交；数字人 Adapter 约 35 个文件 / 2700 行，含 Real/Mock、测试与模块文档</td></tr>
+<div class="table-scroll"><table>
+  <thead><tr><th>项</th><th>内容</th></tr></thead>
+  <tbody>
+    <tr><td>团队</td><td>12 人 · 约 2.5 个月 · 897 次提交</td></tr>
+    <tr><td>我的角色</td><td>实习工程师（2026.06 – 2026.09，约 3.5 个月）</td></tr>
+    <tr><td>我主导的模块</td><td>数字人 Integration Adapter（0→1）、定时移动迎宾、迎宾点归位判定、巡检结果链路、工具路由测评体系</td></tr>
+    <tr><td>我参与的部分</td><td>迎宾与状态机联调、ASR / TTS 生命周期、不活跃看门狗、下屏链路、充电状态显示、附近地点搜索</td></tr>
+    <tr><td>可验证产出</td><td>运行时主仓 52 次非 merge 提交；数字人 Adapter 约 35 个文件 / 2700 行，含 Real/Mock、测试与模块文档</td></tr>
   </tbody>
 </table></div>
 
-<p data-page-node-id="FKWobJQH647oD0JXKGPgJt">同期还从 0 到 1 做过两个配套前端（不在本笔记范围内）：一个排队叫号大屏（多窗口并行、TTS 播报、暂停恢复、毫秒级链路日志），一个巡检结果面板（轮询、安全评分、异常图片预览）。合计 48 次非 merge 提交。</p>
+<p>同期还从 0 到 1 做过两个配套前端（不在本笔记范围内）：一个排队叫号大屏（多窗口并行、TTS 播报、暂停恢复、毫秒级链路日志），一个巡检结果面板（轮询、安全评分、异常图片预览）。合计 48 次非 merge 提交。</p>
 
-<p class="muted-note" data-page-node-id="ewJ86HjVB3oI3Xe3cVXv0A">以上数字来自内部仓库的提交记录，只统计本人署名提交；内部仓库不公开，无法给出可点击的链接。</p>
+<p class="muted-note">以上数字来自内部仓库的提交记录，只统计本人署名提交；内部仓库不公开，无法给出可点击的链接。</p>
 
-<h2 id="toc" data-page-node-id="GioQ05VFmX1G4k72Hzqiz9">从这里开始</h2>
+<h2 id="toc">从这里开始</h2>
 
-<div class="card-grid" data-page-node-id="qGEU6RzZfYaVRJjFzOMzfB">
-  <a class="card" href="01-overview.html" data-page-node-id="dkFv7DvVkkYeXT5dqbkLBE">
-    <div class="card-icon" data-page-node-id="vQHtgwKtPdgTlHWaDHdNnk">🧭</div>
-    <div class="card-title" data-page-node-id="04OaVHAc2TMq9ySYSun4in">系统全景</div>
-    <div class="card-desc" data-page-node-id="vbpej317wquuHRFINAGzqq">一次完整交互要经过哪几个边界，谁持有谁，进程里到底跑着什么。</div>
+<div class="card-grid">
+  <a class="card" href="00-glossary.html">
+    <div class="card-icon">🔤</div>
+    <div class="card-title">术语表</div>
+    <div class="card-desc">64 个词，每条都说清"不是什么"，外加最容易混的十二组。卡住先看这里。</div>
   </a>
-  <a class="card" href="02-architecture.html" data-page-node-id="heJLuo7gPYNg5dun5toMHO">
-    <div class="card-icon" data-page-node-id="bOSrFT0f6kD2w4EUFWZOpd">🏗️</div>
-    <div class="card-title" data-page-node-id="BwerktAqITv7E6VQEK78Eo">分层与边界</div>
-    <div class="card-desc" data-page-node-id="4qqBDVtQBbpmWf1GNkongo">九层职责、依赖方向，以及"为什么系统里不允许出现 Dispatcher"。</div>
+  <a class="card" href="01-overview.html">
+    <div class="card-icon">🧭</div>
+    <div class="card-title">系统全景</div>
+    <div class="card-desc">一次完整交互要经过哪几个边界，谁持有谁，进程里到底跑着什么。</div>
   </a>
-  <a class="card" href="03-adapters.html" data-page-node-id="ZZdbSwFcm4552938liFYRm">
-    <div class="card-icon" data-page-node-id="ApHmDIZ2FGqSKwEFbghQvj">🔌</div>
-    <div class="card-title" data-page-node-id="k4nTkurXlKT3ae7C6mJXzM">Adapter 体系</div>
-    <div class="card-desc" data-page-node-id="EPZihwFFfwlnZSeFCBhVia">三类判定、Real/Mock 合同一致、Runtime 生命周期与 facade 唯一入口。</div>
+  <a class="card" href="02-architecture.html">
+    <div class="card-icon">🏗️</div>
+    <div class="card-title">分层与边界</div>
+    <div class="card-desc">九层职责、依赖方向，以及"为什么系统里不允许出现 Dispatcher"。</div>
   </a>
-  <a class="card" href="04-tools.html" data-page-node-id="4ZRFKhISk7plh9EGzKCLyg">
-    <div class="card-icon" data-page-node-id="TVdGZMawXvMYPGaYNX11C2">🧰</div>
-    <div class="card-title" data-page-node-id="wTAW987Bu8mRBc1SPqzXq1">Tool 体系</div>
-    <div class="card-desc" data-page-node-id="a8EKkchNHHcOfiVeNWH3NO">代码注册作为唯一事实源，Schema 与入口自动推导，YAML 只管开关。</div>
+  <a class="card" href="03-adapters.html">
+    <div class="card-icon">🔌</div>
+    <div class="card-title">Adapter 体系</div>
+    <div class="card-desc">三类判定、Real/Mock 合同一致、Runtime 生命周期与 facade 唯一入口。</div>
   </a>
-  <a class="card" href="05-events.html" data-page-node-id="oGEgbcOKHZnBWyuUvJEz0S">
-    <div class="card-icon" data-page-node-id="N6bPlbtC7fNxeg1Nw9CtVC">📡</div>
-    <div class="card-title" data-page-node-id="cUFbnhV96nFyxD7OZuwPBI">事件驱动</div>
-    <div class="card-desc" data-page-node-id="q81qOYXY87GA4EPBmahxCs">事实总线与命令总线的分野，以及为什么它不承诺顺序和幂等。</div>
+  <a class="card" href="04-tools.html">
+    <div class="card-icon">🧰</div>
+    <div class="card-title">Tool 体系</div>
+    <div class="card-desc">代码注册作为唯一事实源，Schema 与入口自动推导，YAML 只管开关。</div>
   </a>
-  <a class="card" href="06-session.html" data-page-node-id="FK1ipfnvMqLdpKTFPiioq7">
-    <div class="card-icon" data-page-node-id="mdF4sS6UY3TnE5RS7Xxk0r">👤</div>
-    <div class="card-title" data-page-node-id="kAU8KMdjqpeDgHE2EXjE5l">会话生命周期</div>
-    <div class="card-desc" data-page-node-id="OSmlFn4C1R1UnGVJe6qFqH">单活跃会话模型、人脸驱动的会话切换，以及三类倒计时与六个暂停源。</div>
+  <a class="card" href="05-events.html">
+    <div class="card-icon">📡</div>
+    <div class="card-title">事件驱动</div>
+    <div class="card-desc">事实总线与命令总线的分野，以及为什么它不承诺顺序和幂等。</div>
   </a>
-  <a class="card" href="07-robot-state.html" data-page-node-id="9UvmMp02j8EB8Z6bjSOwAk">
-    <div class="card-icon" data-page-node-id="rzoLQr8fTN6jDCYUxCVGvg">🤖</div>
-    <div class="card-title" data-page-node-id="7wl6I5cVfUIO54GtVc7MUD">机器人状态机</div>
-    <div class="card-desc" data-page-node-id="KiUcEKXqDCepatTFBEtYJA">15 个状态、两张矩阵：什么能转过去，什么状态下能听见什么。</div>
+  <a class="card" href="06-session.html">
+    <div class="card-icon">👤</div>
+    <div class="card-title">会话生命周期</div>
+    <div class="card-desc">单活跃会话模型、人脸驱动的会话切换，以及三类倒计时与六个暂停源。</div>
   </a>
-  <a class="card" href="08-compression.html" data-page-node-id="KB6IEMBJ8C4bOqcBrVBGk5">
-    <div class="card-icon" data-page-node-id="HtC54zJacR9djQLXlcsfpM">🗜️</div>
-    <div class="card-title" data-page-node-id="UH5HsSglRivNwFsErVJQh7">上下文压缩</div>
-    <div class="card-desc" data-page-node-id="LGdjDAWRd7RiB7ZnvBIeLU">预算模型、CAS 提交，以及"办过"和"办成了"为什么必须分开存。</div>
+  <a class="card" href="07-robot-state.html">
+    <div class="card-icon">🤖</div>
+    <div class="card-title">机器人状态机</div>
+    <div class="card-desc">15 个状态、两张矩阵：什么能转过去，什么状态下能听见什么。</div>
   </a>
-  <a class="card" href="09-prompt.html" data-page-node-id="d4P70WUXWO79155jtnEYgN">
-    <div class="card-icon" data-page-node-id="yWTQce6jmnbbxm46oD0oES">📝</div>
-    <div class="card-title" data-page-node-id="LmK0qhDw5REIO9czYPWEBP">提示词工程</div>
-    <div class="card-desc" data-page-node-id="am2QoGe9C0woSme8nJQuna">prompt 是代码：按启用的工具拼装，模型看不到一个没启用的工具。</div>
+  <a class="card" href="08-compression.html">
+    <div class="card-icon">🗜️</div>
+    <div class="card-title">上下文压缩</div>
+    <div class="card-desc">预算模型、CAS 提交，以及"办过"和"办成了"为什么必须分开存。</div>
   </a>
-  <a class="card" href="10-config.html" data-page-node-id="hg12vVs1VJmc58B3buYe2p">
-    <div class="card-icon" data-page-node-id="GZRovUFZBeEerTX2ckNTSg">⚙️</div>
-    <div class="card-title" data-page-node-id="t4cqfYdguyabfUTl3OuigL">配置体系</div>
-    <div class="card-desc" data-page-node-id="oOMe3h4ZCpzDDvw98cjt3E">三级合并、启动时一次性构造类型化 Config，运行期不可变。</div>
+  <a class="card" href="09-prompt.html">
+    <div class="card-icon">📝</div>
+    <div class="card-title">提示词工程</div>
+    <div class="card-desc">prompt 是代码：按启用的工具拼装，模型看不到一个没启用的工具。</div>
   </a>
-  <a class="card" href="11-observability.html" data-page-node-id="qCU8DU62I4TvDFFnrkLzcU">
-    <div class="card-icon" data-page-node-id="PJIkwxgPplYr88Bqcf4oT1">🔍</div>
-    <div class="card-title" data-page-node-id="5xcmR6XEeM4Ogss23HeYDa">可观测性</div>
-    <div class="card-desc" data-page-node-id="3j2tjrgt8jt5e4VpCvs9gb">结构化日志、事件流与快照，出问题时从哪一层开始查。</div>
+  <a class="card" href="10-config.html">
+    <div class="card-icon">⚙️</div>
+    <div class="card-title">配置体系</div>
+    <div class="card-desc">三级合并、启动时一次性构造类型化 Config，运行期不可变。</div>
   </a>
-  <a class="card" href="12-testing.html" data-page-node-id="nX5kEJwYjOUPDPBRp5uDAt">
-    <div class="card-icon" data-page-node-id="9LtA2myT29kSSEsUfgg0zu">🧪</div>
-    <div class="card-title" data-page-node-id="AxsPjmo3LnUq4IBTocYF2C">测试策略</div>
-    <div class="card-desc" data-page-node-id="G7cEoWsk5LgBeb73hb6Rb3">21 个架构守护测试：把"不许这么写"变成会红的 CI。</div>
+  <a class="card" href="11-observability.html">
+    <div class="card-icon">🔍</div>
+    <div class="card-title">可观测性</div>
+    <div class="card-desc">结构化日志、事件流与快照，出问题时从哪一层开始查。</div>
   </a>
-  <a class="card" href="13-ai-workflow.html" data-page-node-id="6ISBHTjVZpRzyrNzCJIzAh">
-    <div class="card-icon" data-page-node-id="UUeeRiLTmnJeeTFdfD3Ntm">🤝</div>
-    <div class="card-title" data-page-node-id="SzeobL6ToC9DuHUkeH5DYb">AI 协作开发</div>
-    <div class="card-desc" data-page-node-id="73PNoKCAA6orYz12lneTJM">用一份准则目录约束人和 AI，让 7.8 万行代码不散架。</div>
+  <a class="card" href="12-testing.html">
+    <div class="card-icon">🧪</div>
+    <div class="card-title">测试策略</div>
+    <div class="card-desc">21 个架构守护测试：把"不许这么写"变成会红的 CI。</div>
+  </a>
+  <a class="card" href="13-ai-workflow.html">
+    <div class="card-icon">🤝</div>
+    <div class="card-title">AI 协作开发</div>
+    <div class="card-desc">用一份准则目录约束人和 AI，让 7.8 万行代码不散架。</div>
   </a>
 </div>
 
-<div class="info-box tip" data-page-node-id="bm2MkDdRb1BCz3aPiwaUvu">
-  <span class="ib-icon" data-page-node-id="OMGeZMZaoMEt99G2hku0iL">📖</span>
-  <div class="ib-content" data-page-node-id="iBSg7tec4EzFltghHBi7QU">
-    <p class="ib-title" data-page-node-id="8UIn6NK3uK2nadLTIuPB58">阅读建议</p>
-    <p data-page-node-id="Dknx1JfU3DwEOBD3gt5Brm">关心架构判断 → 读 <a href="02-architecture.html" data-page-node-id="TJiNsuz0KnKnuQmF37yxj9">02</a> 和 <a href="03-adapters.html" data-page-node-id="CYIeJKVR4xn4iXdcJxaffM">03</a>；
-    关心"一次对话什么时候结束" → 读 <a href="06-session.html#watchdog" data-page-node-id="IK3jwZp4d0DdZOOBTBi7JN">06 的看门狗一节</a>；
-    关心"机器人在什么状态下会做什么" → 直接读 <a href="07-robot-state.html" data-page-node-id="vEka3VwfkGoCjx0nuR6vtW">07</a>；
-    关心"AI 怎么参与工程" → 读 <a href="12-testing.html" data-page-node-id="CF9R0xaaHSICVCsXX7ulX3">12</a> 和 <a href="13-ai-workflow.html" data-page-node-id="urnCbW4Hac2zztQhBdxE3V">13</a>；
-    只想看结论 → 跳到 <a href="14-retrospective.html" data-page-node-id="nvOcYjTavJSDFfgnGHg8Td">复盘</a>。</p>
+<div class="info-box tip">
+  <span class="ib-icon">📖</span>
+  <div class="ib-content">
+    <p class="ib-title">阅读建议</p>
+    <p>看不懂某个词 → 先查 <a href="00-glossary.html">术语表</a>；
+    关心架构判断 → 读 <a href="02-architecture.html">02</a> 和 <a href="03-adapters.html">03</a>；
+    关心"一次对话什么时候结束" → 读 <a href="06-session.html#watchdog">06 的看门狗一节</a>；
+    关心"机器人在什么状态下会做什么" → 直接读 <a href="07-robot-state.html">07</a>；
+    关心"AI 怎么参与工程" → 读 <a href="12-testing.html">12</a> 和 <a href="13-ai-workflow.html">13</a>；
+    只想看结论 → 跳到 <a href="14-retrospective.html">复盘</a>。</p>
   </div>
 </div>
 
       </article>
-      <aside class="toc" data-page-node-id="uMfgARnIvRFvXLElYPGJSj">
-        <div class="toc-inner" data-page-node-id="ebdVMa07zhr7Bxt6g8YAxm">
-          <div class="toc-title" data-page-node-id="C0MySHj4hEGOfig4YTajiD">本页目录</div>
-          <ul class="toc-list" id="toc-list" data-page-node-id="kESFcj96CuySBbLXl6p9WO"></ul>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
         </div>
       </aside>
     </div>
-    <footer data-page-node-id="BLyrPDNvjW5WK9r8BewGEb">
-      <span data-page-node-id="FhxoCzpuDm7EmZuklgwWiV">个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
-      <span data-page-node-id="7QqNH4E6DR826Fijz2MGdf">plain HTML · no build step</span>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
     </footer>
   </div>
 </div>

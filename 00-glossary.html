@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>术语表 · 服务机器人 Agent 运行时笔记</title>
+<meta name="description" content="服务机器人 Agent 运行时的术语表：架构骨架、事件与状态、会话与上下文、设备与场景、工程治理，以及最容易混的十二组。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="index.html">
+        <span class="logo-icon">◈</span>
+        Agent Runtime Notes
+      </a>
+      <div class="sidebar-subtitle">服务机器人 · 具身智能体运行时</div>
+      <span class="sidebar-version">v0.1 · 骨架稿</span>
+    </div>
+    <ul class="sidebar-nav" id="sidebar-nav"></ul>
+  </aside>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="topbar-mobile-btn" id="sidebar-toggle">☰</button>
+      <nav class="breadcrumb">
+        <a href="index.html">笔记</a>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">术语表</span>
+      </nav>
+      <div class="topbar-links">
+        <a class="topbar-link" href="index.html">目录</a>
+      </div>
+    </header>
+    <div class="content-wrapper">
+      <article class="article">
+
+<h1>术语表 <span class="page-badge tag tag-gray">00</span></h1>
+
+<p class="lead">这张表不是词典。它只做一件事：让你在别的章节里遇到一个词时，能在一分钟内知道它<strong>是什么</strong>、<strong>不是什么</strong>，以及去哪看它怎么被用。</p>
+
+<div class="info-box tip">
+  <span class="ib-icon">💡</span>
+  <div class="ib-content">
+    <p class="ib-title">怎么看这张表</p>
+    <p>每条都带一个 <code>≠</code>。那不是补充说明，是这条词条存在的理由——<strong>读者卡住的地方，通常不是不认识这个词，而是以为它等于另一个词</strong>。
+    如果只想看最容易混的那几组，直接跳到 <a href="#confusable">最容易混的十二组</a>。</p>
+  </div>
+</div>
+
+<div class="gloss-filter">
+  <input type="search" id="gloss-q" placeholder="过滤：Adapter / 矩阵 / 压缩 / 回充 …" autocomplete="off" aria-label="过滤术语">
+  <span class="gloss-count" id="gloss-count">加载中</span>
+</div>
+
+<h2 id="confusable">最容易混的十二组</h2>
+
+<p>先把这些分清，后面五组表就不用逐条背了。</p>
+
+<div class="table-scroll"><table class="confusable-table">
+  <thead><tr><th>这一对</th><th>差别在哪</th></tr></thead>
+  <tbody>
+    <tr><td><strong>转移矩阵 vs 转发矩阵</strong></td><td>前者 15 × 15，管<b>状态与状态</b>：能不能转过去。后者 15 × 18，管<b>事件与状态</b>：这个事实要不要被听见。两张表都叫「矩阵」，但回答的是完全不同的问题。</td></tr>
+    <tr><td><strong>Adapter vs Tool</strong></td><td>Tool 是模型能调用的<b>动作</b>，Adapter 是动作最终落到的<b>地方</b>。Tool 不该知道协议，Adapter 不该知道模型。</td></tr>
+    <tr><td><strong>Adapter vs Engine</strong></td><td>Engine 是 Adapter 的第三种，但它连的不是外部世界，而是进程内的技术状态。判据是「管的是业务规则还是技术资源」——业务状态机不许进 Engine。</td></tr>
+    <tr><td><strong>Event vs Command</strong></td><td>事件是「已经发生了」，命令是「请去做」。总线只收前者。混进命令的代价是发布者会开始等结果。</td></tr>
+    <tr><td><strong>Event vs Snapshot</strong></td><td>事件是<b>流</b>：发生过什么。快照是<b>点</b>：现在是什么。没有快照，异步系统就没有「确认」这个动作。</td></tr>
+    <tr><td><strong>压缩 vs 截断</strong></td><td>压缩是保结构地重建，截断是直接丢。丢掉的如果是「办过 / 办成了」这类事实，模型就会把尝试说成完成。</td></tr>
+    <tr><td><strong>暂停 vs 取消（看门狗）</strong></td><td>暂停不是「把倒计时按住」，而是<b>取消 timer</b>；恢复不是「继续走」，而是<b>重装完整时长</b>。所以没有剩余时间，也不需要保存进度。</td></tr>
+    <tr><td><strong>Session vs Turn</strong></td><td>会话是容器，轮次是单位。一个人可以在一段会话里说十轮；换个人则要换会话。</td></tr>
+    <tr><td><strong>移动态 vs 驻停态</strong></td><td>十四种业务状态按「在动 / 不动」各分一份，加上急停共十五种。移动态默认屏蔽输入、只放行输出——但 <code>WELCOMING_MOVING</code> 放行前三种输入，<code>PATROLLING_MOVING</code> 与 <code>GREETING_MOVING</code> 放行人脸输入。<b>别按注释推，按矩阵读。</b></td></tr>
+    <tr><td><strong>「办过」vs「办成了」</strong></td><td>动作发生过 ≠ 结果已确认。这两类事实分开存，压缩时不许合并，因为它们对模型的意义完全不同。</td></tr>
+    <tr><td><strong>公共合同 vs 实现细节</strong></td><td>合同是 Event / Snapshot / Config / 签名，实现是 transport、重连策略、内部异常。一旦把实现写进快照（比如 <code>use_mock</code>），实现就升格成合同，从此换不掉。</td></tr>
+    <tr><td><strong>fail-closed vs 降级</strong></td><td>降级是「还能提供一部分能力就继续」，fail-closed 是「拿不准就别动」。涉及运动与安全时用后者，涉及说话时用前者。</td></tr>
+  </tbody>
+</table></div>
+
+<section class="gloss-group">
+<h2 id="a">A · 架构骨架</h2>
+<div class="table-scroll"><table class="gloss-table">
+  <thead><tr><th>术语</th><th>定义与边界</th><th>详见</th></tr></thead>
+  <tbody>
+    <tr id="g-layer"><td><strong>九层分层</strong><br><small>Layer</small></td><td>app / agent / domain / tools / adapters / config / prompts / observability / shared。每层用「不许做什么」定义，不按技术栈切。≠ 目录分类：分层的判据是依赖方向，不是文件夹名字。</td><td><a href="02-architecture.html#layers">02</a></td></tr>
+    <tr id="g-composition-root"><td><strong>composition root</strong><br><small>组合根</small></td><td>进程启动时唯一一处构造配置、创建 Adapter、装配运行时的代码。≠ 依赖注入容器：它不解析依赖图，只按固定顺序 new，然后绑定。</td><td><a href="01-overview.html#ownership">01</a></td></tr>
+    <tr id="g-adapter"><td><strong>Adapter</strong><br><small>适配器</small></td><td>进程与外部世界之间唯一的边界层。所有设备、外部服务、SDK 只能从这里进。≠ Tool：Tool 是模型能调用的动作，Adapter 是动作最终落到的地方。</td><td><a href="03-adapters.html#classes">03</a></td></tr>
+    <tr id="g-public-adapter"><td><strong>Public Adapter</strong><br><small>公共适配器</small></td><td>对外暴露稳定合同的 Adapter。系统共 27 个，上层只能通过 facade 拿到它，不能自己 new。</td><td><a href="03-adapters.html">03</a></td></tr>
+    <tr id="g-hardware"><td><strong>Hardware Adapter</strong><br><small>硬件适配器</small></td><td>连物理设备或厂商硬件 SDK。必须同时提供 real.py 与 mock.py，否则测试只能连真机。</td><td><a href="03-adapters.html#classes">03</a></td></tr>
+    <tr id="g-integration"><td><strong>Integration Adapter</strong><br><small>集成适配器</small></td><td>连进程外的软件服务或第三方平台。同样强制 Real + Mock 双实现。</td><td><a href="03-adapters.html#classes">03</a></td></tr>
+    <tr id="g-engine"><td><strong>Engine</strong><br><small>引擎</small></td><td>只在进程内运行、但有状态和生命周期要管理的技术组件。是 Adapter 的第三种，准入门槛比前两类高。≠ 业务状态机：业务规则属于 domain，不许因为「它在进程内」就包装成 Engine。</td><td><a href="03-adapters.html#engine">03</a></td></tr>
+    <tr id="g-realmock"><td><strong>Real / Mock 合同一致</strong></td><td>同一个 Adapter 的两种实现必须导出同一组 Event、Snapshot 与错误分类。测试里用 Mock 跑通的链路，换 Real 不能因为字段不一样就崩。</td><td><a href="03-adapters.html#realmock">03</a></td></tr>
+    <tr id="g-runtime"><td><strong>Adapter Runtime</strong></td><td>唯一管理 Adapter 实例与生命周期的组件：绑定 facade → 按稳定顺序 start() → 任一失败反向回滚并解绑。</td><td><a href="03-adapters.html#runtime">03</a></td></tr>
+    <tr id="g-facade"><td><strong>公共 facade</strong><br><small>门面</small></td><td>运行期解析 Adapter 实例的唯一入口，形如 <code>from src.adapters import adapters</code>。关键区别：<b>import 可以，解析实例只能在受控时机</b>——import 时 Runtime 可能还没绑定。</td><td><a href="03-adapters.html#runtime">03</a></td></tr>
+    <tr id="g-tool"><td><strong>Tool</strong><br><small>工具</small></td><td>模型可调用的一个能力，签名固定为 <code>execute(input) -&gt; output</code>，不区分只读与副作用。≠ Adapter：Tool 不碰协议，只做参数校验与编排。</td><td><a href="04-tools.html#contract">04</a></td></tr>
+    <tr id="g-tool-registration"><td><strong>ToolRegistration</strong></td><td>一个 Tool 的唯一声明处。给模型看的 Schema、能力描述、可调用入口、启动期校验全部从它推导。</td><td><a href="04-tools.html#registration">04</a></td></tr>
+    <tr id="g-capability-spec"><td><strong>CapabilitySpec</strong><br><small>能力规格</small></td><td>从 ToolRegistration 自动推导出的能力描述，给编排层与 prompt 装配使用。不许手写。</td><td><a href="04-tools.html#registration">04</a></td></tr>
+    <tr id="g-engine-gate"><td><strong>能力准入</strong><br><small>Engine 六项门槛</small></td><td>判断一个进程内组件该不该包装成 Engine 的六条标准，满足至少三项才准。作用不是提高标准，是给「不要包装」一个可以引用的依据。</td><td><a href="03-adapters.html#engine">03</a></td></tr>
+  </tbody>
+</table></div>
+</section>
+
+<section class="gloss-group">
+<h2 id="b">B · 事件与状态</h2>
+<div class="table-scroll"><table class="gloss-table">
+  <thead><tr><th>术语</th><th>定义与边界</th><th>详见</th></tr></thead>
+  <tbody>
+    <tr id="g-event-bus"><td><strong>Event Bus</strong><br><small>事件总线</small></td><td>进程内的事实广播。只投递，不做路由决策，不保证顺序与幂等。</td><td><a href="05-events.html">05</a></td></tr>
+    <tr id="g-fact"><td><strong>事实</strong><br><small>Fact</small></td><td>已经发生、不可撤销的事。这是总线上唯一合法的语义。≠ 命令：命令是「请做某事」，不许上总线。</td><td><a href="05-events.html#fact">05</a></td></tr>
+    <tr id="g-command"><td><strong>命令</strong><br><small>Command</small></td><td>「请做某事」的请求。明确禁止进事件总线——一旦允许，就会出现「发出去还在等结果」的隐式 RPC，超时、重试、顺序全部变成未定义行为。</td><td><a href="05-events.html#fact">05</a></td></tr>
+    <tr id="g-subscriber"><td><strong>Subscriber</strong><br><small>订阅者</small></td><td>接收事实的一方。不要求先于 Adapter 启动，除非模块声明了「无法由 Snapshot 恢复」的关键启动事实。</td><td><a href="05-events.html#subscriber">05</a></td></tr>
+    <tr id="g-frozen"><td><strong>FrozenJsonValue</strong></td><td>公共事件里 JSON-like 字段的统一类型：递归不可变、可安全序列化。冻结与还原全项目只有一份实现（<code>freeze_json()</code> / <code>thaw_json()</code>），不许自己写递归。</td><td><a href="05-events.html#immutable">05</a></td></tr>
+    <tr id="g-snapshot"><td><strong>Snapshot</strong><br><small>快照</small></td><td>统一形态 <code>snapshot() -&gt; XxxSnapshot</code>，回答「这个模块现在是什么状态」。≠ Event：事件说发生过什么，快照说现在是什么。没有快照，异步系统就没有确认手段。</td><td><a href="03-adapters.html#build-2">03</a></td></tr>
+    <tr id="g-brain-input"><td><strong>Brain Input</strong><br><small>输入总线</small></td><td>校验、去重、补 session_id，然后发布「输入已被接受」。不跑 Agent、不排队、不持久化。</td><td><a href="01-overview.html#two-buses">01</a></td></tr>
+    <tr id="g-brain-output"><td><strong>Brain Output</strong><br><small>输出总线</small></td><td>校验输出、维护局部输出生命周期、发布输出事实。不生成内容、不保证前端送达。</td><td><a href="01-overview.html#two-buses">01</a></td></tr>
+    <tr id="g-robot-state"><td><strong>RobotState</strong><br><small>机器人状态机</small></td><td>15 个状态，回答三件事：此刻能听见什么、能转到哪、转过去要做什么。</td><td><a href="07-robot-state.html#states">07</a></td></tr>
+    <tr id="g-transition-matrix"><td><strong>转移矩阵</strong><br><small>transition_matrix</small></td><td>15 × 15。行是当前状态、列是目标状态，回答<b>「能不能转过去」</b>。对角线为 1，表示允许幂等切换。</td><td><a href="07-robot-state.html#transition">07</a></td></tr>
+    <tr id="g-forwarding-matrix"><td><strong>转发矩阵</strong><br><small>forwarding_matrix</small></td><td>15 × 18。行是当前状态、列是源事件，回答<b>「这个状态下这个事实要不要被听见」</b>。≠ 转移矩阵：一个管状态之间，一个管事件与状态之间。两张表最容易混。</td><td><a href="07-robot-state.html#forwarding">07</a></td></tr>
+    <tr id="g-reaction"><td><strong>Reaction</strong><br><small>反应</small></td><td>状态转移后必须执行的动作，按模块分成 8 组。≠ 副作用：它是显式登记的，不是顺带发生的。</td><td><a href="07-robot-state.html#reaction">07</a></td></tr>
+    <tr id="g-revision"><td><strong>revision</strong><br><small>版本号</small></td><td>状态机的单调递增版本号。reaction 入队时带上 revision，执行前发现已过期就丢弃，避免用旧状态做新决定。</td><td><a href="07-robot-state.html#reaction">07</a></td></tr>
+    <tr id="g-idempotent-switch"><td><strong>幂等切换</strong></td><td>请求转移到「当前所在的状态」本身也允许，不报错、不触发额外动作。矩阵对角线为 1 就是为了这个。</td><td><a href="07-robot-state.html#transition">07</a></td></tr>
+  </tbody>
+</table></div>
+</section>
+
+<section class="gloss-group">
+<h2 id="c">C · 会话与上下文</h2>
+<div class="table-scroll"><table class="gloss-table">
+  <thead><tr><th>术语</th><th>定义与边界</th><th>详见</th></tr></thead>
+  <tbody>
+    <tr id="g-session"><td><strong>Session</strong><br><small>会话</small></td><td>一次连续交互的容器，承载历史、业务卡、已确认事实与当前状态。同一时刻只允许一个活跃会话。</td><td><a href="06-session.html#single">06</a></td></tr>
+    <tr id="g-turn"><td><strong>Turn</strong><br><small>轮次</small></td><td>会话内一个「用户说 → 模型答」的单元。会话是容器，轮次是单位。</td><td><a href="06-session.html#history">06</a></td></tr>
+    <tr id="g-single-session"><td><strong>单活跃会话</strong></td><td>全局同时只有一个 session 处于活跃态。换人靠人脸判定切换，不是靠并发开新会话。</td><td><a href="06-session.html#single">06</a></td></tr>
+    <tr id="g-watchdog"><td><strong>看门狗</strong><br><small>session watchdog</small></td><td>判断「这次会话是不是该结束了」的计时器集合：三类倒计时 + 六个暂停源 + 一条保险丝。</td><td><a href="06-session.html#watchdog">06</a></td></tr>
+    <tr id="g-pause-source"><td><strong>暂停源</strong></td><td>能让看门狗停表的六种情况：下屏、导航、TTS、人脸、人体感应、状态门禁。</td><td><a href="06-session.html#pause-sources">06</a></td></tr>
+    <tr id="g-pause-semantics"><td><strong>暂停 = 取消，恢复 = 重装</strong></td><td>暂停时直接取消 timer，恢复时按完整时长重新计时。<b>没有「剩余时间」这个概念</b>——这也是为什么不能把它实现成「暂停一个正在走的倒计时」。</td><td><a href="06-session.html#semantics">06</a></td></tr>
+    <tr id="g-fuse"><td><strong>无关联点击保险丝</strong></td><td>屏幕长时间没有与当前会话关联的点击时，强制结束会话。防止一个没人管的会话永远不结束。</td><td><a href="06-session.html#fuse">06</a></td></tr>
+    <tr id="g-compression"><td><strong>上下文压缩</strong></td><td>上下文接近窗口上限时，把旧段落重写成更短的表示，<b>保留结构</b>而不是直接丢弃。≠ 截断：截断会丢掉「办过什么」这类必须留痕的事实。</td><td><a href="08-compression.html#budget">08</a></td></tr>
+    <tr id="g-threshold"><td><strong>threshold / target</strong><br><small>阈值与目标</small></td><td>触发压缩的比例（0.75）与压缩后要降到多少（0.60）。两者之间有意识地留出余量，避免刚压完就再次触发。</td><td><a href="08-compression.html#budget">08</a></td></tr>
+    <tr id="g-bounded-batch"><td><strong>有界批次</strong></td><td>一次压缩只处理有上限的段落数，避免单次调用吃掉整个预算、或者超时后被整体丢弃。</td><td><a href="08-compression.html#batch">08</a></td></tr>
+    <tr id="g-cas"><td><strong>CAS 提交</strong></td><td>压缩结果写回前校验 revision 与前缀摘要，不一致就放弃本次结果。防止把「基于旧上下文压缩出来的摘要」盖到已经变化的历史上。</td><td><a href="08-compression.html#cas">08</a></td></tr>
+    <tr id="g-two-facts"><td><strong>两类事实</strong><br><small>办过 / 办成了</small></td><td>「办过」（动作发生过）与「办成了」（结果已确认）分开存，压缩时不许合并。合并的直接后果是模型把「尝试过」说成「已完成」。</td><td><a href="08-compression.html#facts">08</a></td></tr>
+    <tr id="g-prompt-version"><td><strong>prompt 版本</strong></td><td>七个版本共存，由 <code>prompt_version</code> 选择。对话 prompt 可切换，压缩 prompt 在构造时锁死，不许运行期换。</td><td><a href="09-prompt.html#policies">09</a></td></tr>
+    <tr id="g-tool-assembly"><td><strong>按启用工具拼装</strong></td><td>prompt 里的工具说明由当前启用的工具渲染出来。没启用的工具，模型<b>看不到</b>——所以不会去调一个不存在的工具。</td><td><a href="09-prompt.html#assembly">09</a></td></tr>
+  </tbody>
+</table></div>
+</section>
+
+<section class="gloss-group">
+<h2 id="d">D · 设备与场景</h2>
+<div class="table-scroll"><table class="gloss-table">
+  <thead><tr><th>术语</th><th>定义与边界</th><th>详见</th></tr></thead>
+  <tbody>
+    <tr id="g-digital-human"><td><strong>数字人</strong><br><small>digital human</small></td><td>屏幕上会说话的形象，通过长连接收帧、切状态。属于 Integration Adapter。</td><td><a href="03-adapters.html#build">03</a></td></tr>
+    <tr id="g-ring-mic"><td><strong>环形麦阵</strong><br><small>ring mic</small></td><td>环形麦克风阵列，提供唤醒与声源方位。方位只在少数几个状态下被转发。</td><td><a href="07-robot-state.html#forwarding">07</a></td></tr>
+    <tr id="g-sound-direction"><td><strong>声源方位</strong></td><td>唤醒时判断人站在哪个方向。只在迎宾驻停、复位移动、巡检移动、迎宾移动这几个状态放行。</td><td><a href="07-robot-state.html#forwarding">07</a></td></tr>
+    <tr id="g-human-proximity"><td><strong>人体感应</strong><br><small>human proximity</small></td><td>有人 / 无人的<b>持续事实</b>，不是边沿事件。所以「腿在人不在」不会给看门狗续期。</td><td><a href="06-session.html#semantics">06</a></td></tr>
+    <tr id="g-face-candidate"><td><strong>人脸候选</strong><br><small>face candidates</small></td><td>抓拍到的人脸候选帧。稳定 10 帧 / 1.0 秒才认定为一张可用的人脸，避免路过的人被当成来访者。</td><td><a href="06-session.html#face-switch">06</a></td></tr>
+    <tr id="g-face-departure"><td><strong>人脸离开判定</strong></td><td>去抖 10 帧 + 确认 3.0 秒。侧脸、低头、短暂遮挡都不能立刻判成「人走了」。</td><td><a href="06-session.html#face-switch">06</a></td></tr>
+    <tr id="g-arrival"><td><strong>迎宾点归位判定</strong></td><td>判断「到没到迎宾点」必须同时看距离与朝向。只看「导航完成」会导致机器人在两点之间来回切换。</td><td><a href="14-retrospective.html#case-arrival">14</a></td></tr>
+    <tr id="g-moving-welcome"><td><strong>移动迎宾</strong></td><td>边走边迎。靠「前方有人」这一事实决定何时停驻收口，而不是让状态机自己去组合人脸与人体信号。</td><td><a href="07-robot-state.html#triggers">07</a></td></tr>
+    <tr id="g-patrol"><td><strong>巡检</strong><br><small>patrol</small></td><td>按路线巡逻并上报结果。巡检结果是一条独立链路，不经过对话。</td><td><a href="07-robot-state.html#states">07</a></td></tr>
+    <tr id="g-recharge"><td><strong>回充</strong><br><small>recharge</small></td><td>回充电桩。两个入口：<code>start_recharge()</code> 只对白名单状态开放，<code>force_recharge()</code> 面向四个驻停态；局部幂等靠复用 operation_id。</td><td><a href="07-robot-state.html#charging">07</a></td></tr>
+    <tr id="g-emergency"><td><strong>急停</strong><br><small>EMERGENCY_STOPPED</small></td><td>唯一能从任意状态进入、且只允许自环或解除到 IDLING_STATIONARY 的状态。</td><td><a href="07-robot-state.html#emergency">07</a></td></tr>
+    <tr id="g-reconciliation"><td><strong>启动对账</strong><br><small>reconciliation</small></td><td>启动后延迟数秒核对真实状态，优先级为 急停 &gt; 充电 &gt; 默认。拿不准时选择不动，而不是猜一个。</td><td><a href="07-robot-state.html#emergency">07</a></td></tr>
+  </tbody>
+</table></div>
+</section>
+
+<section class="gloss-group">
+<h2 id="e">E · 工程治理</h2>
+<div class="table-scroll"><table class="gloss-table">
+  <thead><tr><th>术语</th><th>定义与边界</th><th>详见</th></tr></thead>
+  <tbody>
+    <tr id="g-guard-test"><td><strong>架构守护测试</strong></td><td>21 条只解析语法树的测试，把「不许这么写」变成会红的 CI。不跑业务代码，所以跑得很快。</td><td><a href="12-testing.html#guards">12</a></td></tr>
+    <tr id="g-boundary-test"><td><strong>边界测试</strong></td><td>只看 import 关系与调用形态，判断有没有越层、有没有第二套实例。≠ 单元测试：它验证的是结构，不是行为。</td><td><a href="12-testing.html#guards">12</a></td></tr>
+    <tr id="g-contract"><td><strong>公共合同</strong><br><small>public contract</small></td><td>一个模块对外承诺的类型集合：Event、Snapshot、Config、方法签名。合同一旦发布，实现可以换，形状不能变。</td><td><a href="03-adapters.html#build-1">03</a></td></tr>
+    <tr id="g-fail-closed"><td><strong>fail-closed</strong></td><td>拿不准时选择「不动作」，而不是「猜一个继续」。启动对账、状态判定、权限判断都用这条。</td><td><a href="07-robot-state.html#emergency">07</a></td></tr>
+    <tr id="g-second-entry"><td><strong>第二套入口</strong></td><td>同一个能力存在两条获取路径。明令禁止——一旦有第二条，第一条的约束就形同虚设。</td><td><a href="02-architecture.html#rules">02</a></td></tr>
+    <tr id="g-dispatcher"><td><strong>Dispatcher</strong><br><small>ActionDispatcher</small></td><td>把「模型说要干什么」集中翻译成调用的组件。本项目<b>明确禁止</b>，并用一条测试钉死。替代方案是让 Tool 自己就是那个翻译层。</td><td><a href="02-architecture.html#rules">02</a></td></tr>
+    <tr id="g-toolset-version"><td><strong>工具集整体版本化</strong></td><td>工具不是逐个上线，而是整套切换。保证「工具集 + prompt」是一个原子版本，回滚时一起回。</td><td><a href="04-tools.html#versioning">04</a></td></tr>
+    <tr id="g-dual-doc"><td><strong>README / AGENTS 双文档</strong></td><td>每个模块两份文档：README 写给人看机制，AGENTS 写给 AI 看规则（能改什么、不能改什么）。</td><td><a href="13-ai-workflow.html">13</a></td></tr>
+    <tr id="g-migration"><td><strong>迁移收口</strong></td><td>新入口上线后删掉旧入口，不留两套并行。长期并行的结果是谁也不敢删，最后两套都在跑。</td><td><a href="14-retrospective.html#rewrite">14</a></td></tr>
+    <tr id="g-prototype"><td><strong>第一代原型</strong></td><td>重写前的版本。文中刻意用这个抽象说法，不写它的内部代号。</td><td><a href="14-retrospective.html#rewrite">14</a></td></tr>
+  </tbody>
+</table></div>
+</section>
+
+<h2 id="naming">译名对照：为什么这么译</h2>
+
+<p>术语的中文写法本身是一个决定。这里把决定摊开，方便你判断哪些地方我译得不对。</p>
+
+<div class="table-scroll"><table class="term-table">
+  <thead><tr><th>词</th><th>正文里怎么写</th><th>理由</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Adapter</strong></td><td>保留英文</td><td>「适配器」在硬件语境里已经被占用了（电源适配器、转接头）。而且代码里的类名就是它，保留英文反而少一层翻译损耗。</td></tr>
+    <tr><td><strong>Engine</strong></td><td>译作「引擎」，与 Adapter 并列时保留英文</td><td>单独出现时译，因为它需要和「业务状态机」区分；和 Adapter 一起出现时保留英文，因为它们是同一层里的三种东西，用同一套写法更容易看清并列关系。</td></tr>
+    <tr><td><strong>Tool</strong></td><td>译作「工具」</td><td>「工具调用」在中文里已经是通行说法，不译反而别扭。</td></tr>
+    <tr><td><strong>Event</strong></td><td>译作「事件」</td><td>通行译法，且「事件驱动」这个词读者已经熟悉。</td></tr>
+    <tr><td><strong>fact</strong></td><td>译作「事实」，不译「事件」</td><td>这里需要两个层次：Event 是<b>载体</b>，fact 是<b>语义</b>。都译成「事件」就分不出「发了一个事件」和「说的是一件已经发生的事」。</td></tr>
+    <tr><td><strong>Reaction</strong></td><td>译作「反应」，不译「副作用」</td><td>「副作用」暗示「顺带发生的」，但这里是显式登记、必须执行的动作，译错会让人以为可以不管它。</td></tr>
+    <tr><td><strong>Snapshot</strong></td><td>译作「快照」</td><td>通行译法，语义准确。</td></tr>
+    <tr><td><strong>facade</strong></td><td>正文保留英文</td><td>「门面」在中文里太虚，读者容易以为是 UI 层的东西。保留英文并始终写成「公共 facade」，反而清楚。</td></tr>
+    <tr><td><strong>Session / Turn</strong></td><td>译作「会话 / 轮次」</td><td>Turn 不译「回合」，避免和游戏、对话游戏化场景混。</td></tr>
+    <tr><td><strong>revision</strong></td><td>保留英文</td><td>译「版本号」会和 prompt 版本、工具集版本混成一团。保留英文，读者一看就知道是那个单调递增的整数。</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="analogy">如果你熟悉别的架构</h2>
+
+<p>这套东西不是凭空造的，多数概念在别处有对应物。下面给出对应关系，以及<b>差异在哪</b>——差异通常比对应更有信息量。</p>
+
+<div class="table-scroll"><table class="term-table">
+  <thead><tr><th>这里</th><th>相近概念</th><th>差在哪</th></tr></thead>
+  <tbody>
+    <tr><td>Adapter</td><td>Ports &amp; Adapters 里的 Adapter</td><td>这里把 Port 也并进了同一个合同：一个模块同时是 Port 和 Adapter，不再分两层接口。</td></tr>
+    <tr><td>公共 facade</td><td>Service Locator</td><td>只允许存在一个，且禁止构造器注入。Service Locator 被诟病的「依赖不可见」，这里用「import 可以、解析实例不行」这条硬规则限制住。</td></tr>
+    <tr><td>Engine</td><td>进程内 Domain Service</td><td>只收技术资源，不收业务规则。业务状态机留在 domain 层。</td></tr>
+    <tr><td>Tool</td><td>function calling / MCP tool</td><td>多了两件事：类型化错误输出（不抛异常给模型）、工具集整体版本化。</td></tr>
+    <tr><td>Snapshot</td><td>CQRS 的读模型</td><td>按模块划分，不按查询划分；每个模块只有一个快照，不按场景裁剪。</td></tr>
+    <tr><td>Event Bus</td><td>进程内 Domain Event</td><td>明确不保证顺序、不保证幂等、不保证投递。谁依赖，谁自己写清适用范围并测试。</td></tr>
+    <tr><td>Reaction</td><td>Saga 里的后续动作</td><td>没有补偿回滚，也不保证多个 reaction 的执行顺序；过期即丢弃（靠 revision）。</td></tr>
+    <tr><td>转移矩阵</td><td>状态机的 transition table</td><td>外置成配置文件，可以被测试直接读、被工具直接校验，而不是藏在代码分支里。</td></tr>
+    <tr><td>架构守护测试</td><td>ArchUnit</td><td>没有引第三方库，用标准库的 AST 手写。好处是不增加依赖、能查调用形态；坏处是要自己维护。</td></tr>
+  </tbody>
+</table></div>
+
+<div class="info-box info">
+  <span class="ib-icon">🧭</span>
+  <div class="ib-content">
+    <p class="ib-title">找不到想要的词？</p>
+    <p>这张表只收「读别的章节会卡住」的词，不收业务话术、产品名和硬件型号。如果某个词这里没有，多半是因为它只在一章里出现、且那一章已经解释过——
+    直接去 <a href="index.html">目录</a> 找对应章节。</p>
+  </div>
+</div>
+
+      </article>
+      <aside class="toc">
+        <div class="toc-inner">
+          <div class="toc-title">本页目录</div>
+          <ul class="toc-list" id="toc-list"></ul>
+        </div>
+      </aside>
+    </div>
+    <footer>
+      <span>个人技术笔记 · 已做匿名化处理，不含任何公司代码、配置、客户数据或商业信息 · CC BY-NC 4.0</span>
+      <span>plain HTML · no build step</span>
+    </footer>
+  </div>
+</div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

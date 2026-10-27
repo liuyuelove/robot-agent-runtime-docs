@@ -556,6 +556,79 @@ body {
 
 .table-scroll > table { margin: 0; }
 
+/* ============================================================
+   术语表（00-glossary.html）
+   ============================================================ */
+.gloss-filter {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 12px;
+  margin: 22px 0 4px;
+  background: linear-gradient(180deg, #ffffff 62%, rgba(255, 255, 255, 0));
+}
+
+.gloss-filter input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 13px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.gloss-filter input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(122, 162, 247, 0.16);
+}
+
+.gloss-count {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.gloss-group.is-hidden { display: none; }
+
+.gloss-table tbody tr { scroll-margin-top: 92px; }
+.gloss-table tbody tr:target { background: #fffbeb; }
+
+.gloss-table th:nth-child(1) { width: 24%; }
+.gloss-table th:nth-child(3) { width: 58px; }
+.gloss-table th:nth-child(3),
+.gloss-table td:nth-child(3) {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.gloss-table td small {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+@media (min-width: 769px) {
+  .gloss-table td:first-child { white-space: nowrap; }
+}
+
+/* 易混淆表：左列是「A vs B」，不许在词中间断行 */
+.confusable-table td:first-child { white-space: nowrap; }
+
+/* 译名对照 / 类比表：左列是单个词，断在词中间会变成 Reactio-n */
+.term-table td:first-child { white-space: nowrap; }
+
+@media (max-width: 768px) {
+  .confusable-table { min-width: 430px; }
+  .gloss-table { min-width: 470px; }
+}
+
 /* 内联 SVG 示意图 */
 .diagram {
   margin: 26px 0;

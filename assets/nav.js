@@ -13,6 +13,7 @@
       section: '入门',
       items: [
         { label: '项目概述', href: 'index.html', icon: '🏠' },
+        { label: '术语表', href: '00-glossary.html', icon: '🔤' },
         {
           label: '系统全景', href: '01-overview.html', icon: '🧭',
           sub: [
@@ -260,6 +261,42 @@
   }
 
   /* ======================================================
+     Glossary filter (00-glossary.html only)
+     ====================================================== */
+  function initGlossaryFilter() {
+    const input = document.getElementById('gloss-q');
+    if (!input) return;
+
+    const groups = Array.from(document.querySelectorAll('.gloss-group'));
+    const counter = document.getElementById('gloss-count');
+    const rows = Array.from(document.querySelectorAll('.gloss-table tbody tr'));
+    const total = rows.length;
+
+    function apply() {
+      const q = input.value.trim().toLowerCase();
+      let shown = 0;
+
+      groups.forEach(group => {
+        let visible = 0;
+        group.querySelectorAll('.gloss-table tbody tr').forEach(tr => {
+          const hit = !q || tr.textContent.toLowerCase().includes(q);
+          tr.style.display = hit ? '' : 'none';
+          if (hit) visible++;
+        });
+        group.classList.toggle('is-hidden', visible === 0);
+        shown += visible;
+      });
+
+      if (counter) {
+        counter.textContent = q ? shown + ' / ' + total + ' 条' : total + ' 条';
+      }
+    }
+
+    input.addEventListener('input', apply);
+    apply();
+  }
+
+  /* ======================================================
      Helpers
      ====================================================== */
   function getCurrentPage() {
@@ -323,6 +360,7 @@
     initMobileSidebar();
     initSmoothScroll();
     initCopyButtons();
+    initGlossaryFilter();
   });
 
 })();

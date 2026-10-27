@@ -110,10 +110,11 @@
 
 <p class="muted-note">（片段示意，按类别各取一个代表列；完整矩阵 15 行 × 18 列）</p>
 
-<p>三条贯穿规则：</p>
+<p>四条贯穿规则：</p>
 
 <ul>
-  <li><strong>MOVING 状态屏蔽 Brain Input</strong>——机器人在走路时不该"听见"用户说话，否则会把路过的一句话当成需求；但 <strong>Brain Output 全部转发</strong>，因为正在播报的内容需要被追踪。</li>
+  <li><strong>MOVING 状态基本屏蔽 Brain Input</strong>——机器人在走路时不该"听见"用户说话，否则会把路过的一句话当成需求；但 <strong>Brain Output 全部转发</strong>，因为正在播报的内容需要被追踪。</li>
+  <li><strong>例外不是笔误，是按用途开的</strong>：七个 MOVING 态里，回位 / 空闲 / 业务 / 充电四个全屏蔽输入；<code>WELCOMING_MOVING</code> 放行 Received、Partial 与人脸，只屏蔽硬件输入；<code>PATROLLING_MOVING</code> 与 <code>GREETING_MOVING</code> 放行人脸输入——移动迎宾和巡检要在走动中判断"前方有没有人"，屏蔽了就没法停驻。</li>
   <li><strong>STATIONARY 默认全放行 Brain I/O</strong>，只屏蔽运动相关事实（人已经在面前站定，不需要再靠"有人经过"来判断）。</li>
   <li><strong>运动事实只在对它有意义的状态放行</strong>：环形麦方位只在 4 个状态转发（迎宾驻留、回位途中、巡检移动、移动迎宾），人体在场只在 3 个状态转发。</li>
 </ul>
